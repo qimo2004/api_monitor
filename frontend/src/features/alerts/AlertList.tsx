@@ -26,6 +26,7 @@ export default function AlertList() {
   const setPendingCount = useAlertStore((s) => s.setPendingCount);
   const user = useAuthStore((s) => s.user);
   const isViewer = user?.role === 'viewer';
+  const [todayNewTotal, setTodayNewTotal] = useState(0);
 
   useEffect(() => {
     apiApi.list({ page_size: 200 }).then((res) => setApis(res.items || [])).catch(() => {});
@@ -46,6 +47,15 @@ export default function AlertList() {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  // 独立获取今日新增总数（不受筛选条件影响）
+  const fetchTodayCount = useCallback(async () => {
+    try {
+      const res = await alertApi.todayCount();
+      setTodayNewTotal(res.count || 0);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { fetchTodayCount(); }, [fetchTodayCount]);
+
   const handleResolve = async (id: number) => {
     try {
       await alertApi.resolve(id);
@@ -55,10 +65,6 @@ export default function AlertList() {
   };
 
   const pendingCount = data.filter((d) => d.status === 'pending').length;
-  const todayNewCount = data.filter((d) => {
-    const dDate = new Date(d.created_at).toDateString();
-    return dDate === new Date().toDateString();
-  }).length;
 
   const columns = [
     { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 160,
@@ -85,7 +91,7 @@ export default function AlertList() {
     <Card title="告警管理">
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}><Statistic title="当前列表待处理" value={pendingCount} valueStyle={{ color: '#ff4d4f' }} /></Col>
-        <Col span={6}><Statistic title="今日新增" value={todayNewCount} valueStyle={{ color: '#faad14' }} /></Col>
+        <Col span={6}><Statistic title="今日新增" value={todayNewTotal} valueStyle={{ color: '#faad14' }} /></Col>
         <Col span={6}><Statistic title="当前列表总数" value={data.length} /></Col>
       </Row>
       <Space style={{ marginBottom: 16, flexWrap: 'wrap' }}>

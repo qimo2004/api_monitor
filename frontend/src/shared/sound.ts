@@ -13,25 +13,29 @@ export function setSoundEnabled(enabled: boolean): void {
   localStorage.setItem(SOUND_KEY, String(enabled));
 }
 
+function createBeep(ctx: AudioContext, startTime: number, duration: number): void {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(800, startTime);
+  oscillator.frequency.setValueAtTime(1000, startTime + 0.1);
+  oscillator.frequency.setValueAtTime(1200, startTime + 0.2);
+  gain.gain.setValueAtTime(0.3, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration);
+}
+
 export function playAlertSound(): void {
   if (!isSoundEnabled()) return;
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(1000, ctx.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(1200, ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-    // 重复一次
-    oscillator.start(ctx.currentTime + 0.6);
-    oscillator.stop(ctx.currentTime + 1.1);
+    // 第一次提示音
+    createBeep(ctx, ctx.currentTime, 0.5);
+    // 第二次提示音（必须使用独立的 OscillatorNode）
+    createBeep(ctx, ctx.currentTime + 0.6, 0.5);
   } catch {
     // 静默失败，声音提醒不可用时不影响功能
   }

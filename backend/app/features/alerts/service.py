@@ -209,6 +209,28 @@ class AlertService:
             })
         return items, total
 
+    def get_today_count(self, current_user=None) -> int:
+        """获取今日新增告警总数（不受筛选条件影响）"""
+        from datetime import datetime
+        from app.models.models import ApiAuthorization
+        today_start = datetime.now(CST).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_utc = today_start.astimezone(timezone.utc)
+        q = self.db.query(Alert).filter(Alert.created_at >= today_start_utc)
+
+        # 运维角色只查看授权接口的告警
+        if current_user and current_user.role == "operator":
+            auth_ids = [
+                r[0] for r in self.db.query(ApiAuthorization.api_id).filter(
+                    ApiAuthorization.user_id == current_user.id
+                ).all()
+            ]
+            if auth_ids:
+                q = q.filter(Alert.api_id.in_(auth_ids))
+            else:
+                return 0
+
+        return q.count()
+
     def resolve_alert(self, alert_id: int, resolver: str = "") -> Alert | None:
         """解决告警：设 status=resolved，记录解决时间，发送邮件通知"""
         alert = self.db.query(Alert).filter(Alert.id == alert_id).first()

@@ -10,4 +10,5 @@ export const alertApi = {
   list: (params?: any) => client.get('/api/alerts', { params }).then(r => r.data),
   resolve: (id: number) => client.post(`/api/alerts/${id}/resolve`).then(r => r.data),
   todayCount: () => client.get('/api/alerts/today-count').then(r => r.data),
+  pendingCount: () => client.get('/api/alerts/pending-count').then(r => r.data),
 };

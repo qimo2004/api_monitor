@@ -17,6 +17,17 @@ router = APIRouter(prefix="/api", tags=["告警管理"])
 CST = timezone(timedelta(hours=8))  # 东八区
 
 
+@router.get("/alerts/pending-count", response_model=dict)
+def pending_alert_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取当前待处理告警总数（不受筛选条件影响）"""
+    svc = AlertService(db)
+    count = svc.get_pending_count(current_user=current_user)
+    return {"count": count}
+
+
 @router.get("/alerts/today-count", response_model=dict)
 def today_alert_count(
     db: Session = Depends(get_db),

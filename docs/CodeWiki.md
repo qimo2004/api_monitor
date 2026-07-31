@@ -593,6 +593,10 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 | `alerts` | `Alert` | api_id(FK CASCADE), alert_type, message, status(pending/resolved), created_at, resolved_at | N→1 Api |
 | `users` | `User` | username(unique), password_hash, display_name, role(admin/operator/viewer), email, enabled | — |
 | `api_authorizations` | `ApiAuthorization` | api_id(FK CASCADE), user_id(FK CASCADE) | N→1 Api, N→1 User |
+| `check_logs_archive` | `CheckLogArchive` | api_id, status, http_status, response_time_ms, response_size, response_summary, error_message, check_time, archived_at | 归档表（无 FK 关系） |
+| `alerts_archive` | `AlertArchive` | api_id, alert_type, message, status, created_at, resolved_at, archived_at | 归档表（无 FK 关系） |
+
+> 归档表用于存储超过保留期（90 天）的历史数据，保证原表查询性能。归档表与原表结构一致，但无外键约束（避免原接口删除后影响归档数据）。
 
 ### 6.2 ER 关系图
 
@@ -844,3 +848,4 @@ SMTP_FROM=your_email@example.com
 5. **统计计算方式**：`StatsService` 从 `CheckLog` **实时计算**统计指标（成功率、平均响应时间、SLA 达标率、日趋势、TOP N 排行），不使用预聚合表，无需日终批处理任务。
 6. **数据库驱动**：`requirements.txt` 含 `aiosqlite`，但 `engine` 使用同步 `create_engine`（`SessionLocal` 为同步会话）；巡检的异步性体现在 `httpx.AsyncClient` 与 FastAPI 异步路由上。
 7. **告警规则**：`AlertService._check_alerts` 当前实现三类告警（`response_timeout` / `status_code_error` / `consecutive_failure`），同类 pending 告警不重复创建；接口恢复成功时自动解决 pending 告警。
+8. **数据归档策略**：每月 1 号凌晨 2 点由 `CronTrigger` 触发 `run_data_archive()` 任务。超过 90 天的 `check_logs` 和已解决（`status="resolved"`）的 `alerts` 迁移到 `check_logs_archive` / `alerts_archive` 表后从原表删除；`pending` 告警不清理。归档表无外键约束，避免原接口删除后影响历史归档数据。

@@ -130,3 +130,45 @@ class ApiAuthorization(Base):
 
     api: Mapped["Api"] = relationship()
     user: Mapped["User"] = relationship()
+
+
+class CheckLogArchive(Base):
+    """巡检日志归档表：存储超过保留期的历史巡检日志"""
+    __tablename__ = "check_logs_archive"
+
+    __table_args__ = (
+        Index("idx_cla_api_id", "api_id"),
+        Index("idx_cla_check_time", "check_time"),
+        {"comment": "巡检日志归档表"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="日志ID")
+    api_id: Mapped[int] = mapped_column(Integer, nullable=False, comment="关联接口ID")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, comment="状态: success/failure")
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="HTTP响应状态码")
+    response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="响应时间(毫秒)")
+    response_size: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="响应体大小(字节)")
+    response_summary: Mapped[str | None] = mapped_column(Text, nullable=True, comment="响应内容摘要")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True, comment="错误信息(仅失败时)")
+    check_time: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, comment="巡检时间")
+    archived_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=sqlfunc.now(), comment="归档时间")
+
+
+class AlertArchive(Base):
+    """告警记录归档表：存储超过保留期的已解决告警"""
+    __tablename__ = "alerts_archive"
+
+    __table_args__ = (
+        Index("idx_ala_api_id", "api_id"),
+        Index("idx_ala_created_at", "created_at"),
+        {"comment": "告警记录归档表"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="告警ID")
+    api_id: Mapped[int] = mapped_column(Integer, nullable=False, comment="关联接口ID")
+    alert_type: Mapped[str] = mapped_column(String(50), nullable=False, comment="告警类型")
+    message: Mapped[str] = mapped_column(String(500), nullable=False, comment="告警消息")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, comment="状态: resolved")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, comment="创建时间")
+    resolved_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True, comment="解决时间")
+    archived_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=sqlfunc.now(), comment="归档时间")

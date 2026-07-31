@@ -1,6 +1,7 @@
-"""FastAPI 应用入口：创建应用实例、注册路由、配置定时巡检调度
+"""FastAPI 应用入口：创建应用实例、注册路由、配置定时巡检调度与数据归档
 - 启动时自动建表（Base.metadata.create_all）
 - APScheduler 定时全量巡检（每60秒检查一次）
+- APScheduler 定时数据归档（每月1号凌晨2点，保留最近90天数据）
 - 操作日志写入 logs/operation.log（按日轮转）
 """
 import logging
@@ -12,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 from app.core.config import engine, SessionLocal
 from app.models import Base
@@ -70,6 +72,70 @@ async def scheduled_check():
         db.close()
 
 
+def run_data_archive():
+    """数据归档任务：将超过保留期(90天)的巡检日志和已解决告警迁移到归档表后删除"""
+    import datetime
+    from app.models.models import CheckLog, Alert, CheckLogArchive, AlertArchive
+
+    db = SessionLocal()
+    logger = logging.getLogger(__name__)
+    try:
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=90)
+
+        # 1. 归档巡检日志（超过90天的）
+        old_logs = db.query(CheckLog).filter(CheckLog.check_time < cutoff).all()
+        archived_log_count = 0
+        for log in old_logs:
+            archive = CheckLogArchive(
+                api_id=log.api_id,
+                status=log.status,
+                http_status=log.http_status,
+                response_time_ms=log.response_time_ms,
+                response_size=log.response_size,
+                response_summary=log.response_summary,
+                error_message=log.error_message,
+                check_time=log.check_time,
+            )
+            db.add(archive)
+            db.delete(log)
+            archived_log_count += 1
+        if archived_log_count > 0:
+            db.commit()
+            logger.info(f"归档完成：巡检日志 {archived_log_count} 条已迁移到 check_logs_archive")
+        else:
+            logger.info("归档检查：无超过90天的巡检日志需要归档")
+
+        # 2. 归档已解决的告警（超过90天的）
+        old_alerts = db.query(Alert).filter(
+            Alert.status == "resolved",
+            Alert.resolved_at < cutoff,
+        ).all()
+        archived_alert_count = 0
+        for alert in old_alerts:
+            archive = AlertArchive(
+                api_id=alert.api_id,
+                alert_type=alert.alert_type,
+                message=alert.message,
+                status=alert.status,
+                created_at=alert.created_at,
+                resolved_at=alert.resolved_at,
+            )
+            db.add(archive)
+            db.delete(alert)
+            archived_alert_count += 1
+        if archived_alert_count > 0:
+            db.commit()
+            logger.info(f"归档完成：已解决告警 {archived_alert_count} 条已迁移到 alerts_archive")
+        else:
+            logger.info("归档检查：无超过90天的已解决告警需要归档")
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"数据归档异常: {e}")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期：启动时建表 + 启动调度器；关闭时停止调度器"""
@@ -79,6 +145,13 @@ async def lifespan(app: FastAPI):
         trigger=IntervalTrigger(seconds=60),
         id="check_all_apis",
         name="全量接口巡检（每60秒）",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_data_archive,
+        trigger=CronTrigger(day=1, hour=2, minute=0),
+        id="data_archive",
+        name="数据归档（每月1号凌晨2点）",
         replace_existing=True,
     )
     scheduler.start()

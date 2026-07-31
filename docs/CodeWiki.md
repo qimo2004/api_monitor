@@ -241,6 +241,17 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - `scheduled_check()` — 定时全量巡检任务。遍历所有 `enabled==1` 的接口，距上次巡检时间 `< check_interval` 则跳过；调用 `CheckService.check_api()` 执行巡检，再调用 `AlertService.check_and_alert()` 检测告警；每轮结束后调用 `check_escalation()` 检查告警升级。
 - `lifespan(app)` — 异步上下文管理器，启动时建表+启动调度器，关闭时停止调度器。
 
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 定时调度 | `APScheduler.AsyncIOScheduler` + `IntervalTrigger(seconds=60)` | 每 60 秒触发一次全量巡检任务 |
+| 巡检间隔控制 | `(now - last_log.check_time).total_seconds() < api.check_interval` | 距上次巡检时间不足 `check_interval` 则跳过，避免频繁请求 |
+| 自动建表 | `Base.metadata.create_all(bind=engine)` | 应用启动时自动创建所有表（若不存在） |
+| 审计日志 | `TimedRotatingFileHandler(when="midnight", backupCount=90)` | Python 标准库日志处理器，按日轮转文件，保留 90 天 |
+| CORS 跨域 | `CORSMiddleware` | 允许 `localhost:3000/5173` 和 `127.0.0.1:3000` 跨域访问 |
+| 生命周期 | `@asynccontextmanager lifespan(app)` | FastAPI 生命周期钩子，启动/关闭时自动管理调度器 |
+
 ### 4.2 核心层 — [core/](file:///f:/day_20/backend/app/core)
 
 #### [config.py](file:///f:/day_20/backend/app/core/config.py)
@@ -249,10 +260,17 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - `get_db()` — FastAPI 依赖注入，提供 DB 会话并自动关闭。
 
 #### [security.py](file:///f:/day_20/backend/app/core/security.py)
-- `hash_password(password)` / `verify_password(plain, hashed)` — bcrypt 哈希与校验。
-- `create_access_token(data)` — 生成 JWT（sub=用户ID，含 role，24h 过期）。
-- `get_current_user(credentials, db)` — 依赖注入：解析 Bearer Token → 返回 `User` 对象；无/无效 Token 返回 401；用户禁用也返回 401。
-- `require_role(required_roles)` — 角色鉴权工厂函数，返回依赖检查器，角色不符返回 403。
+
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 密码哈希 | `passlib.context.CryptContext(schemes=["bcrypt"])` | bcrypt 哈希后存储到 `password_hash` 字段 |
+| 密码校验 | `pwd_context.verify(plain, hashed)` | 校验明文密码与哈希值是否匹配 |
+| JWT 生成 | `python-jose.jwt.encode(data, SECRET_KEY, algorithm="HS256")` | payload 含 `sub`(用户ID)、`role`(角色)、`exp`(24h后过期) |
+| Token 解析 | `HTTPBearer(auto_error=False)` + `jwt.decode()` | 从 `Authorization: Bearer <token>` 请求头解析，无效返回 401 |
+| 用户获取 | `get_current_user(credentials, db)` | 依赖注入：解析 Token → 查 `users` 表 → 返回 User 对象；用户禁用也返回 401 |
+| 角色鉴权 | `require_role(required_roles)` | 工厂函数返回依赖检查器，角色不在列表中返回 403 |
 
 #### [deps.py](file:///f:/day_20/backend/app/core/deps.py)
 统一导出 `get_current_user` 与 `require_role`，供路由层导入。
@@ -324,6 +342,20 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - `check_all()` — 全量巡检所有启用接口。
 - `get_api_status(api)` — 根据最近一条日志判定健康状态：`success→healthy`、`failure→down`、无日志→`unknown`。
 
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 并发控制 | `asyncio.Semaphore(MAX_CONCURRENT_CHECKS=20)` | 类级全局信号量，限制同时巡检的接口数 |
+| HTTP 请求 | `httpx.AsyncClient(timeout=api.timeout/1000)` | 异步 HTTP 客户端，按接口配置的超时时间发请求 |
+| 请求体类型 | `body_type` 字段 | `json` → `client.post(json=body)`；`data` → `client.post(data=body)` |
+| 重试机制 | `for attempt in range(1, MAX_RETRIES+1)` | 捕获 `TimeoutException`/`RequestError`，递增等待 2s/4s/6s 后重试 |
+| 响应记录 | `datetime.now()` 计时 | 计算耗时(ms)，记录状态码、响应大小、响应摘要 |
+| 健康判定 | 最近一条 CheckLog | `status == "success"` → healthy；`failure` → down；无日志 → unknown |
+| 权限过滤 | `ApiAuthorization` 关联表 | operator 角色通过 `api_authorizations` 表过滤仅授权的接口 |
+| 批量操作 | `filter(Api.id.in_(data.ids))` | 批量更新/删除时通过 `IN` 子句一次性操作 |
+| 接口授权 | 全量替换策略 | `DELETE` 旧授权 → `INSERT` 新授权，保证最终一致性 |
+
 **[schemas.py](file:///f:/day_20/backend/app/features/apis/schemas.py)** — 定义 `ApiCreate`、`ApiUpdate`、`ApiResponse`、`ApiStatusOverview`、`ApiBatchImport`、`ApiBatchImportResponse`、`ApiBatchCheckInterval`、`ApiBatchEnabled`、`ApiBatchDelete`、`ApiAuthUpdate`、`CheckLogResponse`、`ManualCheckRequest`、`ManualCheckResponse` 等 Pydantic 模型。
 
 ---
@@ -339,6 +371,17 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 | GET | `/api/logs/{log_id}` | 认证用户 | 单条日志详情（含请求 URL/方法/请求体） |
 
 **[service.py](file:///f:/day_20/backend/app/features/logs/service.py)** — `LogService.get_logs(...)` 分页查询，operator 角色过滤授权接口，联表返回 `api_name` 与 `request_method`。
+
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 分页查询 | `offset((page-1)*page_size).limit(page_size)` | 标准 SQL LIMIT/OFFSET 分页 |
+| 条件筛选 | 链式 `filter()` | 按 `api_id`、`status`、`check_time` 范围动态构建查询条件 |
+| 权限过滤 | `ApiAuthorization` 子查询 | operator 先查授权 `api_id` 列表，再用 `IN` 过滤日志 |
+| 联表返回 | `log.api.name` / `log.api.method` | 通过 SQLAlchemy relationship 联表获取接口名称和方法 |
+| 审计日志 | `TimedRotatingFileHandler(when="midnight")` | 按日轮转写入 `logs/operation.log`，保留 90 天，不占用数据库 |
+| 日志下载 | `PlainTextResponse` + `open(file)` | 直接读取日志文件内容返回，支持按日期指定历史文件 |
 
 ---
 
@@ -365,6 +408,20 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - `check_escalation()` — 告警升级：pending 且 `created_at` 超过 `ALERT_ESCALATION_HOURS` 的告警发升级通知。
 - `get_alerts(...)` / `get_today_count(...)` / `get_pending_count(...)` — 查询方法，operator 角色过滤授权接口。
 - `resolve_alert(alert_id, resolver)` — 手动解决告警，记录解决时间并发邮件。
+
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 响应超时检测 | `latest_log.response_time_ms > api.timeout` | 最新巡检日志响应时间超过接口超时阈值即触发 |
+| 状态码异常检测 | `status == "failure" and http_status is not None` | 巡检状态为 failure 且返回了 HTTP 状态码时触发 |
+| 连续失败检测 | 最近 3 条日志 `all(status == "failure")` | 按 `check_time` 降序取前 3 条，全部 failure 时触发 |
+| 告警聚合 | `filter(Alert.alert_type == type, status == "pending").first()` | 同类型 pending 告警已存在则不再重复创建 |
+| 自动恢复 | `_check_recovery(api)` | 最新日志 success 时，将所有 pending 告警设为 resolved 并通知 |
+| 告警升级 | `created_at < now - ALERT_ESCALATION_HOURS` | 超过 2 小时未解决的 pending 告警发升级通知 |
+| 通知渠道 | `NotificationChannel.send()` 基类 | 当前写审计日志；邮件通过 `SMTP` + `_build_alert_html()` 发送 |
+| 时区处理 | `timezone.utc` 存储 + `astimezone(CST)` 展示 | 告警时间 UTC 存入数据库，返回前端时转为东八区 ISO 格式 |
+| 权限过滤 | `ApiAuthorization` 子查询 | operator 仅查看授权接口产生的告警 |
 
 ---
 
@@ -394,6 +451,20 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - CSV：用 `csv.writer` 生成。
 - PDF：使用 **fpdf2**（`from fpdf import FPDF`），自动查找系统中文字体（simhei/simsun/msyh），绘制数据表、响应时间折线图、成功率柱状图、最慢/最不稳定 TOP10 排行榜。
 
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 实时统计 | `CheckLog` SQL 聚合 | 不使用预聚合表，每次查询从 `check_logs` 实时计算 |
+| 日趋势聚合 | `func.date(CheckLog.check_time)` + `group_by()` | SQLAlchemy `func.date()` 按日期分组，统计每日成功率/平均响应时间 |
+| 成功率计算 | `sum(case(status=="success", 1, else=0)) / count()` | 使用 SQLAlchemy `case` 表达式在数据库层计算 |
+| SLA 达标率 | 每日平均响应时间 <= `expected_response_time` 的天数比例 | 遍历每日聚合结果，统计达标天数占比 |
+| 最慢排行 | `func.avg(response_time_ms)` 降序 | 最近 7 天按平均响应时间降序取 TOP N |
+| 最不稳定排行 | `sum(success) / count()` 升序 | 最近 7 天按成功率升序取 TOP N |
+| CSV 导出 | `csv.writer(io.StringIO())` | 内存中生成 CSV 字符串，通过 `PlainTextResponse` 返回 |
+| PDF 导出 | `fpdf.FPDF` 手动绘制 | 查找系统 CJK 字体 → 绘制数据表 → 坐标计算绘制折线/柱状图 → 排行榜横向条形图 |
+| 颜色编码 | RGB(0-255) 条件着色 | 响应时间 >=1000ms 红色/>=500ms 黄色/<500ms 蓝色；成功率 <70% 红色/<90% 黄色/>=90% 绿色 |
+
 ---
 
 #### 4.5.5 用户认证模块 — [features/auth/](file:///f:/day_20/backend/app/features/auth)
@@ -416,6 +487,18 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 - `get_users(page, page_size)` / `create_user(data)` / `update_user(user_id, data)` / `delete_user(user_id)` — 用户 CRUD；`update_user` 中 `password` 字段单独哈希处理。
 
 **[schemas.py](file:///f:/day_20/backend/app/features/auth/schemas.py)** — `LoginRequest`、`LoginResponse`、`UserCreate`、`UserUpdate`、`UserResponse`。
+
+**实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| 登录认证 | `authenticate() → verify_password() → create_access_token()` | 查 `users` 表 → bcrypt 校验密码 → 生成 JWT Token |
+| 密码创建 | `hash_password()` | 新建/修改用户时，密码字段单独调用 bcrypt 哈希后存入 `password_hash` |
+| 用户状态 | `enabled` 字段 | 禁用用户(enabled=0)无法登录，authenticate 查询时过滤 |
+| 角色区分 | `role` 字段(admin/operator/viewer) | 路由层通过 `require_role(["admin"])` 等装饰器控制访问权限 |
+| 分页查询 | `offset/limit` | 用户列表按 `id` 排序分页返回 |
+| 部分更新 | `exclude_unset=True` | `UserUpdate` 支持部分字段更新，未传字段不覆盖 |
+| 操作审计 | `log_op()` | 增删改用户时记录审计日志（操作人/动作/对象/详情/IP） |
 
 ### 4.6 种子数据 — [seed.py](file:///f:/day_20/backend/seed.py)
 
@@ -444,6 +527,17 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 | [Layout.tsx](file:///f:/day_20/frontend/src/shared/Layout.tsx) | 整体布局：PC 端 Sider 侧栏 + Header（NotificationBell + 声音开关 + 用户下拉菜单）+ Content(Outlet) + Footer；移动端 Drawer 抽屉菜单；非 admin 隐藏「用户管理」菜单；admin 下拉菜单含「下载审计日志」 |
 | [sound.ts](file:///f:/day_20/frontend/src/shared/sound.ts) | Web Audio API 生成提示音（无需音频文件）；`isSoundEnabled`/`setSoundEnabled` 用 localStorage 持久化开关；`playAlertSound` 播放两段 800→1000→1200Hz 的 sine 波提示音 |
 
+**前端实现方法：**
+
+| 功能 | 方法/技术 | 说明 |
+|------|----------|------|
+| HTTP 请求 | Axios 拦截器 | 请求拦截器自动从 localStorage 取 Token 附加 `Authorization: Bearer`；响应拦截器 401 时清 Token 并强制跳转 `/login` |
+| 路由守卫 | `AuthGuard` 组件 | 检查 localStorage 中 `token` 是否存在，无则 `<Navigate to="/login">` |
+| 状态管理 | Zustand (`useAuthStore`/`useAlertStore`) | `token`/`user` 存 localStorage 持久化；`pendingCount` 管理待处理告警数 |
+| 声音提醒 | `Web Audio API` (`OscillatorNode`) | 无需音频文件，动态生成 sine 波频率渐变提示音；开关状态 localStorage 持久化 |
+| 告警铃铛 | 轮询 + 音效 + 标题闪烁 | 定时轮询 `/api/alerts/pending-count`；数量增加时播放音效；新告警时页面标题闪烁「⚠ 有新告警」 |
+| 页面布局 | Ant Design `Layout` | PC 端 Sider 侧栏 + Header + Content + Footer；移动端 Drawer 抽屉菜单；按角色动态显示菜单项 |
+
 ### 5.3 Feature 模块
 
 每个 feature 含页面组件（`.tsx`）+ API 封装（`api.ts`），部分含状态管理（`store.ts`，Zustand）。
@@ -457,6 +551,19 @@ features.* 页面 → 各自 api.ts + 可选 store.ts (Zustand)
 | stats | [Reports.tsx](file:///f:/day_20/frontend/src/features/stats/Reports.tsx)、[api.ts](file:///f:/day_20/frontend/src/features/stats/api.ts) | 统计报表页（接口选择 + SLA 卡片 + 日趋势图 + TOP10 排行 + 导出）；`statsApi` 封装仪表盘/统计/排行/导出 |
 | dashboard | [Dashboard.tsx](file:///f:/day_20/frontend/src/features/dashboard/Dashboard.tsx) | 仪表盘页（统计卡片 + ECharts 饼图/折线图 + 最近日志）；数据通过 `statsApi` 获取 |
 | users | [UserManage.tsx](file:///f:/day_20/frontend/src/features/users/UserManage.tsx)、[UserAuthApis.tsx](file:///f:/day_20/frontend/src/features/users/UserAuthApis.tsx)、[api.ts](file:///f:/day_20/frontend/src/features/users/api.ts) | 用户管理页（CRUD + 点击跳转授权接口）；用户授权接口页（查看/批量删除授权） |
+
+**前端各页面实现方法：**
+
+| 页面 | 关键技术 | 说明 |
+|------|----------|------|
+| 登录页 | Ant Design `Form` + `useAuthStore` | 表单校验后调 `/api/auth/login`，成功后存 Token 到 localStorage 并跳转 |
+| 仪表盘 | `Promise.allSettled` 并行请求 | 同时请求 dashboard/topSlow/apiStatus/pendingAlerts 四个接口，任一失败不影响其他 |
+| 接口管理 | `Drawer` 抽屉表单 + `Table` 批量选择 | CRUD 用抽屉弹窗；批量操作通过 `rowSelection` 选中后调用批量 API |
+| Excel 导入 | `xlsx` (SheetJS) | 前端解析 Excel 文件，提取 name/url/method/group_name 列后调用批量导入 API |
+| 告警管理 | `useSearchParams` URL 参数 | URL 中 `?api_id=` 自动填充筛选条件；解决操作后刷新列表 |
+| 统计报表 | `ReactEChartsCore` 图表组件 | ECharts 饼图/折线图/柱状图展示；接口选择器支持多选对比 |
+| 用户管理 | `Modal` 弹窗表单 | 新增/编辑用户用 Modal；点击用户行跳转该用户的授权接口页 |
+| 声音提醒 | `useEffect` 轮询 + `document.title` | 定时轮询待处理告警数，新告警时调用 `playAlertSound()` 并修改页面标题闪烁 |
 
 ### 5.4 前端路由总览
 

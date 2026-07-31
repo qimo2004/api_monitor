@@ -154,7 +154,7 @@ day_20/
 | pydantic / pydantic-settings | 2.9.0 / 2.5.0 | 数据校验与配置管理 |
 | aiosqlite | 0.20.0 | SQLite 异步驱动（声明，当前 engine 为同步） |
 | python-multipart | 0.0.9 | 表单解析 |
-| reportlab | 4.2.0 | 声明的 PDF 库（**注意**：实际代码使用 fpdf2，见附录） |
+| fpdf2 | >=2.7.0 | PDF 报表生成（`from fpdf import FPDF`） |
 
 ### 3.2 前端依赖（[package.json](file:///f:/day_20/frontend/package.json)）
 
@@ -617,8 +617,6 @@ cd backend
 
 # 2. 安装依赖
 pip install -r requirements.txt
-# 注意：PDF 导出实际依赖 fpdf2，如需 PDF 报表请额外安装
-pip install fpdf2
 
 # 3. （可选）写入种子测试数据
 python seed.py

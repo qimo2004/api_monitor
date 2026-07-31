@@ -116,7 +116,10 @@ export default function ApiList() {
 
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([['名称', 'URL', '方法', '分组'], ['示例接口名称', 'https://api.example.com/endpoint', 'GET', '默认分组']]);
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['名称', 'URL', '方法', '分组', '请求头(JSON)', '请求体(JSON)', '请求体类型'],
+      ['示例接口名称', 'https://api.example.com/endpoint', 'GET', '默认分组', '{"Content-Type":"application/json"}', '{"key":"value"}', 'json'],
+    ]);
     XLSX.utils.book_append_sheet(wb, ws, '模版');
     XLSX.writeFile(wb, '接口导入模版.xlsx');
   };
@@ -137,11 +140,20 @@ export default function ApiList() {
           const urlKey = keys.find(k => /url|地址|链接|link/i.test(k));
           const methodKey = keys.find(k => /方法|method|请求方式|请求方法/i.test(k));
           const groupKey = keys.find(k => /分组|group|组|分类/i.test(k));
+          const headersKey = keys.find(k => /请求头|headers|header|头部/i.test(k));
+          const bodyKey = keys.find(k => /^请求体|body|请求内容/i.test(k));
+          const bodyTypeKey = keys.find(k => /请求体类型|body_type|bodyType|体类型/i.test(k));
+          const headers = headersKey ? String(row[headersKey] || '').trim() : '';
+          const body = bodyKey ? String(row[bodyKey] || '').trim() : '';
+          const bodyType = bodyTypeKey ? String(row[bodyTypeKey] || '').trim().toLowerCase() : 'json';
           return {
             name: nameKey ? String(row[nameKey] || '').trim() : '',
             url: urlKey ? String(row[urlKey] || '').trim() : '',
             method: methodKey ? String(row[methodKey] || '').trim().toUpperCase() : 'GET',
             group_name: groupKey ? String(row[groupKey] || '').trim() : undefined,
+            headers: headers || undefined,
+            body: body || undefined,
+            body_type: (bodyType === 'json' || bodyType === 'data') ? bodyType : 'json',
           };
         }).filter(item => item.name && item.url);
         if (items.length === 0) {

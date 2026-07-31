@@ -251,12 +251,15 @@ def create_api(data: ApiCreate, request: Request, db: Session = Depends(get_db),
 
 @router.post("/apis/batch", response_model=ApiBatchImportResponse)
 def batch_create_apis(data: list[ApiBatchImport], request: Request, db: Session = Depends(get_db), current_user: User = Depends(require_role(["admin"]))):
-    """批量导入接口 (admin)：导入名称、URL、方法、分组，其余用默认值"""
+    """批量导入接口 (admin)：导入名称、URL、方法、分组、请求头、请求体、请求体类型，其余用默认值"""
     created = []
     for item in data:
         if not item.name or not item.url:
             continue
-        api = Api(name=item.name, url=item.url, method=item.method, group_name=item.group_name)
+        api = Api(
+            name=item.name, url=item.url, method=item.method, group_name=item.group_name,
+            headers=item.headers, body=item.body, body_type=item.body_type,
+        )
         db.add(api)
         db.flush()
         created.append(api)

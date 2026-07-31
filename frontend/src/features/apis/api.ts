@@ -26,7 +26,7 @@ export const apiApi = {
   delete: (id: number) => client.delete(`/api/apis/${id}`).then(r => r.data),
   check: (id: number, custom?: any) => client.post(`/api/apis/${id}/check`, custom || undefined).then(r => r.data),
   status: () => client.get('/api/apis/status').then(r => r.data),
-  batchImport: (items: { name: string; url: string; method?: string; group_name?: string }[]) => client.post('/api/apis/batch', items).then(r => r.data),
+  batchImport: (items: { name: string; url: string; method?: string; group_name?: string; headers?: string; body?: string; body_type?: string }[]) => client.post('/api/apis/batch', items).then(r => r.data),
   batchCheckInterval: (ids: number[], check_interval: number) => client.put('/api/apis/batch/check-interval', { ids, check_interval }).then(r => r.data),
   batchEnabled: (ids: number[], enabled: boolean) => client.put('/api/apis/batch/enabled', { ids, enabled }).then(r => r.data),
   batchDelete: (ids: number[]) => client.post('/api/apis/batch/delete', { ids }).then(r => r.data),

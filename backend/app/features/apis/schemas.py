@@ -66,11 +66,14 @@ class ApiStatusOverview(BaseModel):
 
 
 class ApiBatchImport(BaseModel):
-    """批量导入接口：包含名称、URL、方法、分组"""
+    """批量导入接口：包含名称、URL、方法、分组、请求头、请求体、请求体类型"""
     name: str
     url: str
     method: str = "GET"
     group_name: str | None = None
+    headers: str | None = None
+    body: str | None = None
+    body_type: str = "json"
 
 
 class ApiBatchImportResponse(BaseModel):

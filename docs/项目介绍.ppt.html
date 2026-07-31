@@ -829,6 +829,548 @@
   }
   .be-role{font-size:13.5px; color:var(--color-ash);}
 
+  /* ============ Frontend Routes diagram ============ */
+  .s-fe-routes{
+    grid-template-columns:1.05fr 1fr;
+    gap:40px; align-items:center;
+  }
+  .fe-routes-left .kicker{font-size:12.5px;}
+  .fe-routes-left .h-1{margin-top:14px; font-size:50px;}
+  .fe-routes-left .lead{margin-top:20px; max-width:40ch;}
+  .route-tree{
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    background:var(--color-charcoal-card);
+    padding:22px 26px;
+    max-height:580px; overflow:hidden;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .route-title{
+    font-family:var(--font-mono);
+    font-size:12px; color:var(--color-electric-iris);
+    letter-spacing:.12em; text-transform:uppercase;
+  }
+  .route-node{
+    padding:11px 14px;
+    border:1px solid var(--color-slate-edge);
+    border-radius:8px;
+    background:rgba(9,10,12,0.4);
+    display:grid; grid-template-columns:120px 1fr 90px;
+    gap:14px; align-items:center;
+  }
+  .route-path{
+    font-family:var(--font-mono);
+    font-size:12px; color:var(--color-electric-iris);
+    letter-spacing:.02em;
+  }
+  .route-info .rn{
+    font-size:15px; font-weight:600; color:#fff;
+  }
+  .route-info .rc{
+    font-family:var(--font-mono);
+    font-size:10.5px; color:var(--color-smoke);
+    margin-top:3px; letter-spacing:.05em;
+  }
+  .route-role{
+    font-size:11px; color:var(--color-ash);
+    text-align:right;
+    font-family:var(--font-mono);
+    letter-spacing:.04em;
+  }
+  .route-role b{color:var(--color-ember-pulse); font-weight:500;}
+  .route-guard{
+    font-size:10.5px; padding:3px 10px;
+    border-radius:var(--radius-pill);
+    background:rgba(86,131,218,0.1);
+    border:1px solid rgba(86,131,218,0.3);
+    color:var(--color-electric-iris);
+    font-family:var(--font-mono);
+    letter-spacing:.05em;
+  }
+  .route-group{
+    border:1px dashed rgba(86,131,218,0.3);
+    border-radius:10px;
+    padding:10px 14px;
+    background:rgba(86,131,218,0.04);
+  }
+  .route-group-label{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-electric-iris);
+    letter-spacing:.12em; text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .route-group-label b{color:#fff; font-weight:500; margin-left:6px;}
+  .route-group-items{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .sub-nodes{
+    padding-left:24px;
+    margin-top:8px;
+    display:flex; flex-direction:column; gap:8px;
+    border-left:1.5px dashed var(--color-slate-edge);
+    margin-left:18px;
+  }
+  .sub-node{
+    padding:7px 12px;
+    border:1px solid var(--color-slate-edge);
+    border-radius:6px;
+    background:rgba(9,10,12,0.5);
+    display:grid; grid-template-columns:100px 1fr;
+    gap:10px; align-items:center;
+  }
+  .sub-node .sp{
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-electric-iris);
+  }
+  .sub-node .sn{
+    font-size:12.5px; color:var(--color-frost);
+  }
+
+  /* ============ Frontend UI Mockup ============ */
+  .s-ui-mockup{
+    grid-template-rows:auto auto;
+    gap:18px; align-content:center;
+  }
+  .ui-head{
+    display:grid; grid-template-columns:auto 1fr;
+    align-items:end; gap:32px;
+  }
+  .ui-head .h-1{font-size:46px; margin-top:12px;}
+  .ui-head .lead{font-size:15.5px; max-width:50ch; align-self:end;}
+  .ui-mock-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:22px; min-height:0;
+  }
+  .ui-window{
+    border:1px solid var(--color-slate-edge);
+    border-radius:12px;
+    background:var(--color-charcoal-card);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    max-height:490px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  }
+  .ui-window-title{
+    height:34px;
+    background:linear-gradient(180deg,#1e1f22,#151618);
+    border-bottom:1px solid var(--color-slate-edge);
+    display:grid; grid-template-columns:auto 1fr auto;
+    align-items:center; gap:10px;
+    padding:0 14px;
+  }
+  .dots{display:flex; gap:6px;}
+  .dots span{
+    width:11px; height:11px; border-radius:50%;
+    display:inline-block;
+  }
+  .d1{background:#ff5f57;}
+  .d2{background:#febc2e;}
+  .d3{background:#28c840;}
+  .ui-title-text{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-align:center;
+    letter-spacing:.08em;
+  }
+  .ui-size{
+    font-family:var(--font-mono);
+    font-size:9.5px; color:var(--color-iron-veil);
+  }
+  .ui-body{
+    flex:1; min-height:0;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  /* Layout frame: sider + main */
+  .app-frame{
+    display:grid; grid-template-columns:200px 1fr;
+    flex:1; min-height:0;
+    background:#fff;
+  }
+  .app-sider{
+    background:#fff;
+    border-right:1px solid #f0f0f0;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .sider-logo{
+    height:48px;
+    display:flex; align-items:center; justify-content:center;
+    border-bottom:1px solid #f0f0f0;
+    font-weight:700; font-size:13px; color:#001529;
+    letter-spacing:.02em;
+  }
+  .sider-menu{
+    flex:1; padding:6px 0;
+    display:flex; flex-direction:column; gap:1px;
+    overflow:hidden;
+  }
+  .mi{
+    padding:9px 16px;
+    font-size:11.5px; color:#000a12;
+    display:flex; align-items:center; gap:8px;
+    white-space:nowrap;
+  }
+  .mi.act{
+    background:#e6f4ff; color:#1677ff; font-weight:600;
+    border-right:3px solid #1677ff;
+  }
+  .app-main{
+    display:flex; flex-direction:column;
+    background:#f5f7fa;
+    overflow:hidden; min-height:0;
+  }
+  .app-header{
+    height:38px;
+    background:#001529;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px;
+    color:#fff;
+  }
+  .app-header .btns{display:flex; gap:8px; align-items:center;}
+  .bell{
+    width:18px; height:18px;
+    background:#ff4d4f; border-radius:50%;
+    color:#fff; font-size:9px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .app-content{
+    flex:1; padding:10px 12px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    gap:8px;
+  }
+  .stat-row{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:6px;
+  }
+  .sc{
+    background:#fff; border-radius:4px;
+    padding:8px 10px;
+    border:1px solid #f0f0f0;
+  }
+  .sc .tl{font-size:8.5px; color:#666;}
+  .sc .vl{font-size:16px; font-weight:600; color:#000; margin-top:2px;}
+  .sc.ok .vl{color:#52c41a;}
+  .sc.bad .vl{color:#ff4d4f;}
+  .chart-row{
+    display:grid; grid-template-columns:1.1fr 1fr;
+    gap:6px;
+  }
+  .cc{
+    background:#fff; border-radius:4px;
+    border:1px solid #f0f0f0;
+    padding:8px 10px;
+    display:flex; flex-direction:column;
+    min-height:0;
+  }
+  .cc-h{font-size:10px; color:#222; font-weight:600; margin-bottom:4px;}
+  .donut{
+    width:80px; height:80px; border-radius:50%;
+    margin:4px auto 0;
+    background:
+      radial-gradient(closest-side, #fff 62%, transparent 63% 100%),
+      conic-gradient(#52c41a 0 75%, #ff4d4f 75% 88%, #d9d9d9 88% 100%);
+  }
+  .log-table{
+    font-size:8.5px;
+    width:100%;
+    border-collapse:collapse;
+    color:#222;
+  }
+  .log-table th{
+    background:#fafafa; padding:4px 4px;
+    text-align:left; font-weight:500; color:#666;
+    border-bottom:1px solid #f0f0f0;
+  }
+  .log-table td{
+    padding:3.5px 4px;
+    border-bottom:1px solid #f5f5f5;
+  }
+  .tg{display:inline-block; padding:1px 6px; border-radius:3px; font-size:7.5px;}
+  .tg-s{background:#f6ffed; color:#52c41a; border:1px solid #b7eb8f;}
+  .tg-e{background:#fff1f0; color:#ff4d4f; border:1px solid #ffa39e;}
+
+  /* Api list mockup */
+  .api-search-bar{
+    background:#fff;
+    border:1px solid #f0f0f0; border-radius:4px;
+    padding:6px 8px;
+    display:flex; gap:4px; align-items:center;
+    flex-wrap:wrap;
+  }
+  .sb-item{
+    font-size:9px; padding:3px 7px;
+    border:1px solid #d9d9d9; border-radius:3px;
+    color:#666; background:#fff;
+  }
+  .sb-btn{
+    font-size:9px; padding:3px 7px;
+    background:#1677ff; color:#fff; border-radius:3px;
+    margin-left:auto;
+    font-weight:500;
+  }
+  .api-table{
+    background:#fff; border-radius:4px;
+    border:1px solid #f0f0f0;
+    overflow:hidden;
+    flex:1; min-height:0;
+  }
+  .api-t{
+    width:100%; border-collapse:collapse;
+    font-size:8.5px; color:#222;
+  }
+  .api-t th{
+    background:#fafafa; padding:5px 6px;
+    text-align:left; color:#666; font-weight:500;
+    border-bottom:1px solid #f0f0f0;
+  }
+  .api-t td{
+    padding:5px 6px;
+    border-bottom:1px solid #f5f5f5;
+  }
+  .mg{color:#52c41a;} .mr{color:#ff4d4f;} .mo{color:#fa8c16;} .mb{color:#1677ff;}
+  .page-nav{
+    padding:4px 8px;
+    background:#fff;
+    border-top:1px solid #f0f0f0;
+    display:flex; justify-content:flex-end;
+    font-size:9px; color:#666;
+  }
+
+  .ui-capt{
+    margin-top:6px;
+    font-family:var(--font-mono);
+    font-size:10.5px; color:var(--color-smoke);
+    letter-spacing:.08em; text-align:center;
+    text-transform:uppercase;
+  }
+  .ui-capt b{color:var(--color-electric-iris); font-weight:500;}
+
+  /* ============ Image placeholder (for user-inserted screenshots) ============ */
+  .img-slot-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:22px; min-height:0;
+  }
+  .img-slot-grid.col4{grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:18px;}
+  .img-slot{
+    border:1.5px dashed var(--color-slate-edge);
+    border-radius:12px;
+    background:repeating-linear-gradient(
+      135deg,
+      rgba(86,131,218,0.04) 0,
+      rgba(86,131,218,0.04) 12px,
+      transparent 12px,
+      transparent 24px
+    );
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:14px;
+    min-height:0;
+    max-height:520px;
+    padding:30px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .img-slot.compact{max-height:430px;}
+  .img-slot::before{
+    content:''; position:absolute;
+    inset:0; pointer-events:none;
+    border-radius:12px;
+    box-shadow:inset 0 0 0 1px rgba(86,131,218,0.08);
+  }
+  .slot-icon{
+    width:64px; height:64px;
+    border-radius:50%;
+    background:rgba(86,131,218,0.1);
+    border:1.5px solid rgba(86,131,218,0.35);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--color-electric-iris);
+  }
+  .slot-icon.warm{
+    background:rgba(255,137,100,0.1);
+    border-color:rgba(255,137,100,0.35);
+    color:var(--color-ember-pulse);
+  }
+  .slot-label{
+    font-family:var(--font-display);
+    font-size:22px; font-weight:500;
+    color:#fff; letter-spacing:-0.02em;
+    text-align:center;
+  }
+  .slot-en{
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-smoke);
+    letter-spacing:.12em; text-transform:uppercase;
+    text-align:center;
+  }
+  .slot-hint{
+    font-family:var(--font-mono);
+    font-size:11.5px; color:var(--color-iron-veil);
+    letter-spacing:.06em;
+    text-align:center;
+    margin-top:6px;
+    line-height:1.6;
+  }
+  .slot-hint b{color:var(--color-electric-iris); font-weight:500;}
+  .slot-tag{
+    position:absolute; top:14px; right:14px;
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-ember-pulse);
+    letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 10px;
+    border:1px solid rgba(255,137,100,0.35);
+    border-radius:var(--radius-pill);
+    background:rgba(255,137,100,0.06);
+  }
+
+  /* ============ Extra UI mockups (logs / alerts / reports / users) ============ */
+  .s-ui-extra{
+    grid-template-rows:auto auto;
+    gap:18px; align-content:center;
+  }
+  .ui-extra-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:22px; min-height:0;
+  }
+  .ui-window.compact{max-height:430px;}
+
+  /* compact table reused */
+  .mt{
+    width:100%; border-collapse:collapse;
+    font-size:8px; color:#222;
+  }
+  .mt th{
+    background:#fafafa; padding:4px 5px;
+    text-align:left; color:#666; font-weight:500;
+    border-bottom:1px solid #f0f0f0;
+    white-space:nowrap;
+  }
+  .mt td{
+    padding:4px 5px;
+    border-bottom:1px solid #f5f5f5;
+    white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .mt tr.err td{background:#fff2f0;}
+
+  /* alert stat row (3 cols) */
+  .stat-row-3{
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:6px;
+  }
+  .sc-warn .vl{color:#faad14;}
+
+  /* charts grid for reports */
+  .charts-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:6px;
+    flex:1; min-height:0;
+  }
+  .chart-box{
+    background:#fff; border:1px solid #f0f0f0;
+    border-radius:4px; padding:6px 8px;
+    display:flex; flex-direction:column;
+    min-height:0;
+  }
+  .chart-box .ct{font-size:9px; color:#222; font-weight:600; margin-bottom:3px;}
+  .chart-area{
+    flex:1; min-height:0;
+    position:relative;
+    overflow:hidden;
+  }
+  /* line chart svg-like */
+  .line-chart{
+    width:100%; height:100%;
+    background:
+      linear-gradient(180deg, transparent 0%, transparent 80%, rgba(82,196,26,0.08) 100%),
+      linear-gradient(90deg, transparent 96%, #e8e8e8 96%);
+    position:relative;
+  }
+  .bar-row{
+    display:flex; align-items:flex-end; gap:2px;
+    height:100%; padding:4px 2px 0;
+  }
+  .bar{
+    flex:1; background:#52c41a; border-radius:1px 1px 0 0;
+    min-height:3px;
+  }
+  .bar.warn{background:#faad14;}
+  .bar.bad{background:#ff4d4f;}
+
+  /* horizontal bar (TOP10) */
+  .hbar-list{
+    display:flex; flex-direction:column; gap:3px;
+    padding:4px 0;
+    flex:1; min-height:0;
+  }
+  .hbar-item{
+    display:grid; grid-template-columns:70px 1fr 30px;
+    gap:4px; align-items:center;
+    font-size:7.5px; color:#666;
+  }
+  .hbar-track{
+    height:7px; background:#f0f0f0; border-radius:2px;
+    overflow:hidden;
+  }
+  .hbar-fill{
+    height:100%; border-radius:2px;
+  }
+
+  /* radar (3-axis) */
+  .radar-wrap{
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .radar{
+    width:70px; height:70px;
+    position:relative;
+  }
+
+  /* compare table */
+  .cmp-tbl{
+    width:100%; border-collapse:collapse;
+    font-size:7.5px; color:#222;
+    margin-top:3px;
+  }
+  .cmp-tbl th{
+    background:#fafafa; padding:3px 4px;
+    text-align:left; color:#666; font-weight:500;
+    border-bottom:1px solid #f0f0f0;
+  }
+  .cmp-tbl td{
+    padding:3px 4px;
+    border-bottom:1px solid #f5f5f5;
+  }
+
+  /* user table — switch + tags */
+  .sw{
+    width:22px; height:12px; border-radius:6px;
+    background:#52c41a; position:relative;
+    display:inline-block;
+  }
+  .sw::after{
+    content:''; position:absolute;
+    width:10px; height:10px; border-radius:50%;
+    background:#fff; top:1px; right:1px;
+  }
+  .sw.off{background:#d9d9d9;}
+  .sw.off::after{right:auto; left:1px;}
+  .role-tag{
+    display:inline-block; padding:1px 5px;
+    border-radius:3px; font-size:7px;
+    border:1px solid;
+  }
+  .rt-admin{color:#ff4d4f; background:#fff1f0; border-color:#ffa39e;}
+  .rt-op{color:#1677ff; background:#e6f4ff; border-color:#91d5ff;}
+  .rt-view{color:#52c41a; background:#f6ffed; border-color:#b7eb8f;}
+  .op-btn{
+    display:inline-block; padding:1px 4px;
+    border:1px solid #d9d9d9; border-radius:3px;
+    font-size:7px; color:#666; margin-right:2px;
+  }
+  .op-btn.danger{color:#ff4d4f; border-color:#ffa39e;}
+
   /* ============ T08 Closing ============ */
   .s-close{
     grid-template-columns:1fr 1fr;
@@ -953,7 +1495,7 @@
   </div>
   <div class="chrome-bottom">
     <span>Project Introduction</span>
-    <span class="pg"><b id="pgCur">01</b> / 12</span>
+    <span class="pg"><b id="pgCur">01</b> / 16</span>
   </div>
 
   <!-- Nav dots -->
@@ -1195,11 +1737,188 @@
     </div>
   </section>
 
+  <!-- ============ Slide 5.5 · Frontend Routes & Features (T10 split) ============ -->
+  <section class="slide s-fe-routes" data-title="前端路由">
+    <div class="fe-routes-left stagger">
+      <span class="kicker">05.5 / Frontend · 前端路由与页面</span>
+      <h1 class="h-1">6 大功能页面<br>按需鉴权</h1>
+      <p class="lead">基于 React Router v7 + AuthGuard，登录外所有页面统一由 AppLayout（侧边栏 + 顶栏）包裹；非管理员自动隐藏「用户管理」菜单，运维仅可见被授权的接口数据。</p>
+      <div style="margin-top:28px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+        <div style="padding:14px 16px; background:var(--color-charcoal-card); border:1px solid var(--color-slate-edge); border-radius:10px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--color-electric-iris);letter-spacing:.1em;text-transform:uppercase;">技术底座</div>
+          <div style="margin-top:6px;font-size:15px;font-weight:600;color:#fff;">React 19 + Vite 8</div>
+          <div style="margin-top:2px;font-size:12px;color:var(--color-ash);">TypeScript 6 · React Router v7</div>
+        </div>
+        <div style="padding:14px 16px; background:var(--color-charcoal-card); border:1px solid var(--color-slate-edge); border-radius:10px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--color-electric-iris);letter-spacing:.1em;text-transform:uppercase;">UI 组件</div>
+          <div style="margin-top:6px;font-size:15px;font-weight:600;color:#fff;">Ant Design 6</div>
+          <div style="margin-top:2px;font-size:12px;color:var(--color-ash);">Layout · Menu · Drawer · Modal</div>
+        </div>
+        <div style="padding:14px 16px; background:var(--color-charcoal-card); border:1px solid var(--color-slate-edge); border-radius:10px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--color-electric-iris);letter-spacing:.1em;text-transform:uppercase;">状态与图表</div>
+          <div style="margin-top:6px;font-size:15px;font-weight:600;color:#fff;">Zustand + ECharts</div>
+          <div style="margin-top:2px;font-size:12px;color:var(--color-ash);">轻量 Store · 图表可视化</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="route-tree stagger">
+      <div class="route-title">Route Tree · 路由树</div>
+
+      <div class="route-node">
+        <span class="route-path">/login</span>
+        <div class="route-info">
+          <div class="rn">Login 登录页</div>
+          <div class="rc">features/auth/Login.tsx · 用户名密码 JWT</div>
+        </div>
+        <span class="route-role">公开</span>
+      </div>
+
+      <div class="route-group">
+        <div class="route-group-label">AuthGuard + AppLayout<b> / — 受保护路由</b></div>
+        <div class="route-group-items">
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/dashboard</span>
+            <div class="route-info">
+              <div class="rn">仪表盘概览</div>
+              <div class="rc">features/dashboard/Dashboard.tsx</div>
+            </div>
+            <span class="route-role">全部角色</span>
+          </div>
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/apis</span>
+            <div class="route-info">
+              <div class="rn">接口管理</div>
+              <div class="rc">features/apis/ApiList.tsx · CRUD / 导入 / 巡检 / 授权</div>
+            </div>
+            <span class="route-role"><b>admin</b> 管理</span>
+          </div>
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/logs</span>
+            <div class="route-info">
+              <div class="rn">巡检日志</div>
+              <div class="rc">features/logs/LogList.tsx · 条件筛选分页</div>
+            </div>
+            <span class="route-role">全部角色</span>
+          </div>
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/alerts</span>
+            <div class="route-info">
+              <div class="rn">告警管理</div>
+              <div class="rc">features/alerts/AlertList.tsx · 状态筛选 / 解决</div>
+            </div>
+            <span class="route-role">op / admin</span>
+          </div>
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/reports</span>
+            <div class="route-info">
+              <div class="rn">统计报表</div>
+              <div class="rc">features/stats/Reports.tsx · SLA / 对比 / 导出</div>
+            </div>
+            <span class="route-role">全部角色</span>
+          </div>
+          <div class="route-node" style="padding:9px 12px;">
+            <span class="route-path">/users</span>
+            <div class="route-info">
+              <div class="rn">用户管理 + 接口授权详情</div>
+              <div class="rc">features/users/UserManage.tsx · UserAuthApis.tsx</div>
+            </div>
+            <span class="route-role"><b>admin only</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 5.6 · Frontend UI Mockup (Dashboard + ApiList) ============ -->
+  <section class="slide s-ui-mockup" data-title="前端界面">
+    <div class="ui-head stagger">
+      <div>
+        <span class="kicker">05.6 / Frontend UI · 核心界面</span>
+        <h1 class="h-1">仪表盘 + 接口管理 · 双屏预览</h1>
+      </div>
+      <p class="lead">基于 Ant Design 6 企业级组件库构建，左侧仪表盘含 Statistic 指标卡 + ECharts 健康分布饼图 + 最近巡检日志；右侧接口管理含搜索筛选、批量操作、导入导出。<b style="color:var(--color-ember-pulse);font-weight:500;">下方留白区域可插入实际界面截图。</b></p>
+    </div>
+
+    <div class="img-slot-grid stagger">
+      <div class="img-slot">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon">📊</div>
+        <div class="slot-label">仪表盘</div>
+        <div class="slot-en">Dashboard · /dashboard</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+      <div class="img-slot">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon warm">🔗</div>
+        <div class="slot-label">接口管理</div>
+        <div class="slot-en">ApiList · /apis</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 7.5 · UI Mockup: Logs + Alerts ============ -->
+  <section class="slide s-ui-extra" data-title="日志告警界面">
+    <div class="ui-head stagger">
+      <div>
+        <span class="kicker">05.7 / Frontend UI · 巡检日志 + 告警管理</span>
+        <h1 class="h-1">日志追溯 + 告警处置</h1>
+      </div>
+      <p class="lead">左侧巡检日志支持接口/状态/时间范围三维筛选，失败行高亮，点击行展开详情抽屉；右侧告警管理含 3 张统计卡 + 三类告警标签（超时/状态码/连续失败）+ 解决操作。<b style="color:var(--color-ember-pulse);font-weight:500;">下方留白区域可插入实际界面截图。</b></p>
+    </div>
+
+    <div class="img-slot-grid stagger">
+      <div class="img-slot compact">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon">📄</div>
+        <div class="slot-label">巡检日志</div>
+        <div class="slot-en">LogList · /logs</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+      <div class="img-slot compact">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon warm">🚨</div>
+        <div class="slot-label">告警管理</div>
+        <div class="slot-en">AlertList · /alerts</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 7.6 · UI Mockup: Reports + Users ============ -->
+  <section class="slide s-ui-extra" data-title="报表用户界面">
+    <div class="ui-head stagger">
+      <div>
+        <span class="kicker">05.8 / Frontend UI · 统计报表 + 用户管理</span>
+        <h1 class="h-1">数据可视化 + 用户运维</h1>
+      </div>
+      <p class="lead">左侧统计报表含接口对比（折线/柱状/雷达）+ 单接口 SLA 三指标 + 响应时间趋势 + 成功率趋势 + 最慢/最不稳定 TOP10 + CSV/PDF 导出；右侧用户管理含角色标签 + 启用开关 + 增删改抽屉。<b style="color:var(--color-ember-pulse);font-weight:500;">下方留白区域可插入实际界面截图。</b></p>
+    </div>
+
+    <div class="img-slot-grid stagger">
+      <div class="img-slot compact">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon">📈</div>
+        <div class="slot-label">统计报表</div>
+        <div class="slot-en">Reports · /reports</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+      <div class="img-slot compact">
+        <span class="slot-tag">待插入截图</span>
+        <div class="slot-icon warm">👥</div>
+        <div class="slot-label">用户管理</div>
+        <div class="slot-en">UserManage · /users</div>
+        <div class="slot-hint">在此插入前端界面截图<br><b>建议尺寸 1440×900</b></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ Slide 6 · Backend Architecture (T23 Free Single) ============ -->
   <section class="slide s-free-single" data-title="后端架构">
     <div class="free-head stagger">
       <div>
-        <span class="kicker">05 / Backend Architecture · 后端架构</span>
+        <span class="kicker">07 / Backend Architecture · 后端架构</span>
         <h1 class="h-1">入口 · 核心层 · 路由聚合</h1>
       </div>
       <p class="lead">main.py 承担启动编排，core 层封装横切关注点，api/router.py 聚合 5 个 feature 模块 — 三层职责清晰、解耦可测。</p>
@@ -1266,7 +1985,7 @@
   <section class="slide s-be-table" data-title="后端服务">
     <div class="dense-head stagger">
       <div>
-        <span class="kicker">06 / Backend Services · 后端服务与 API</span>
+        <span class="kicker">08 / Backend Services · 后端服务与 API</span>
         <h1 class="h-1">5 模块 · 服务类 · 端点</h1>
       </div>
       <p class="lead">每个 feature 模块按 router → service → model 三层组织，核心业务逻辑封装在 Service 类中，与路由解耦。</p>
@@ -1381,7 +2100,7 @@
       </svg>
     </div>
     <div class="feature-text stagger">
-      <span class="kicker">07 / Data Model · 数据模型</span>
+      <span class="kicker">09 / Data Model · 数据模型</span>
       <h1 class="h-1">5 张表 · 以 apis 为核心</h1>
       <p class="lead">SQLAlchemy 2.0 声明式映射，所有子表通过 api_id 外键关联 apis，统一 CASCADE 级联删除。统计指标由 CheckLog 实时计算，无需预聚合表。</p>
       <div class="feature-points">
@@ -1414,7 +2133,7 @@
   <section class="slide s-dashboard" data-title="业务流程">
     <div class="dash-head stagger">
       <div>
-        <span class="kicker">08 / Business Flow · 业务流程</span>
+        <span class="kicker">10 / Business Flow · 业务流程</span>
         <h1 class="h-1">定时巡检 · 告警联动闭环</h1>
       </div>
       <p class="lead">APScheduler 每 60 秒触发全量巡检，串联巡检引擎 → 告警检测 → 自动恢复 → 升级通知，全程写审计日志。</p>
@@ -1522,7 +2241,7 @@
   <section class="slide s-dense-table" data-title="权限矩阵">
     <div class="dense-head stagger">
       <div>
-        <span class="kicker">09 / RBAC · 角色权限矩阵</span>
+        <span class="kicker">11 / RBAC · 角色权限矩阵</span>
         <h1 class="h-1">三级角色 · 最小权限原则</h1>
       </div>
       <p class="lead">admin 全权管理，operator 限定授权接口的运维操作，viewer 仅查看；接口授权表精细化控制 operator 可见范围。</p>
@@ -1576,7 +2295,7 @@
   <!-- ============ Slide 9 · Run (T06 Refine List) ============ -->
   <section class="slide s-refine" data-title="项目运行">
     <div class="stagger">
-      <span class="kicker">10 / Run · 项目运行</span>
+      <span class="kicker">12 / Run · 项目运行</span>
       <h1 class="h-1">零配置启动<br>开箱即用</h1>
       <p class="lead">SQLite 默认零配置，自动建表 + 启动调度器；前后端独立端口，Axios 直连 8000。</p>
     </div>

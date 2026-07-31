@@ -14,6 +14,7 @@
 5. [前端模块详解](#5-前端模块详解)
 6. [数据模型与 ER 关系](#6-数据模型与-er-关系)
 7. [关键业务流程](#7-关键业务流程)
+   - [7.5 权限隔离实现详解](#75-权限隔离实现详解)
 8. [项目运行方式](#8-项目运行方式)
 9. [配置说明](#9-配置说明)
 10. [附录：实际代码与文档差异说明](#10-附录实际代码与文档差异说明)
@@ -709,6 +710,193 @@ APScheduler 每 60s 触发 scheduled_check()
 | 解决告警 | ✓ | ✓ | ✗ |
 | 报表导出 / 审计日志下载 | ✓ | ✗ | ✗ |
 | 用户管理 | ✓ | ✗ | ✗ |
+
+### 7.5 权限隔离实现详解
+
+本系统权限隔离采用**三层防御**架构：前端 UI 控制 → 路由级角色鉴权 → 数据级行级隔离。三层任一缺失都不安全：前端控制仅为体验优化，后端才是真正的安全边界。
+
+#### 7.5.1 认证机制（JWT + bcrypt）
+
+**密码哈希**：使用 `passlib` 的 bcrypt 方案，哈希存储于 `users.password_hash`，登录时用 `verify_password` 校验，明文密码不落库。
+
+```python
+# app/core/security.py
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+```
+
+**Token 生成**：登录成功后签发 JWT，Payload 携带 `sub`（用户 ID）和 `role`（角色）。Token 有效期默认 24 小时（`ACCESS_TOKEN_EXPIRE_MINUTES=1440`），签发密钥为 `SECRET_KEY`（生产环境应通过 `.env` 覆盖）。
+
+```python
+# app/core/security.py
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+# app/features/auth/service.py
+token = create_access_token({"sub": str(user.id), "role": user.role})
+```
+
+> 注意：JWT 中的 `role` 字段仅作为冗余信息，**实际鉴权时从数据库实时读取 `user.role`**，避免 Token 签发后角色变更不生效的问题。
+
+#### 7.5.2 角色体系（admin / operator / viewer）
+
+角色以字符串存储于 `users.role` 字段，无独立角色表。三种角色默认账号由 `seed.py` 创建：
+
+| 角色 | 默认账号 | 定位 |
+|------|---------|------|
+| `admin` | admin / admin123 | 全功能管理员，可管理接口、用户、授权、导出报表 |
+| `operator` | operator / oper123 | 运维人员，仅能操作被授权的接口、巡检、解决告警 |
+| `viewer` | viewer / view123 | 只读观察者，可查看所有数据但不能执行写操作 |
+
+#### 7.5.3 后端鉴权依赖（路由级权限控制）
+
+核心鉴权逻辑在 [app/core/security.py](file:///f:/day_20/backend/app/core/security.py)，通过 FastAPI 的 `Depends` 机制注入到每个路由：
+
+**`get_current_user`**（认证层）：解析 `Authorization: Bearer <token>` → 校验 JWT → 查库确认用户存在且 `enabled=1` → 返回 `User` 对象。失败返回 401。
+
+```python
+def get_current_user(credentials=Depends(bearer_scheme), db=Depends(get_db)) -> User:
+    if credentials is None:
+        raise HTTPException(401, "Not authenticated")
+    payload = jwt.decode(credentials.credentials, settings.SECRET_KEY,
+                         algorithms=[settings.ALGORITHM])
+    user_id = int(payload.get("sub"))
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or not user.enabled:
+        raise HTTPException(401, "User not found or disabled")
+    return user
+```
+
+**`require_role([...])`**（授权层）：工厂函数，返回一个依赖项，校验 `current_user.role` 是否在允许列表内，否则返回 403。
+
+```python
+def require_role(required_roles: list[str]):
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in required_roles:
+            raise HTTPException(403, "Insufficient permissions")
+        return current_user
+    return role_checker
+```
+
+**路由级权限分配**（按路由文件统计）：
+
+| 路由文件 | 接口 | 权限要求 |
+|---------|------|---------|
+| `auth/routes.py` | `POST /auth/login` | 公开 |
+| | `POST /auth/logout`、`GET /auth/me` | 任意已登录 |
+| | `GET/POST/PUT/DELETE /users` | `admin` |
+| `apis/routes.py` | `GET /apis`、`GET /apis/{id}`、`GET /apis/status` | 任意已登录 |
+| | `POST/PUT/DELETE /apis`、批量操作、`POST /apis/batch` | `admin` |
+| | `POST /apis/{id}/check`（手动巡检） | `operator`、`admin` |
+| | 授权管理（`PUT /apis/{id}/authorizations` 等） | `admin` |
+| `alerts/routes.py` | `GET /alerts`、`GET /alerts/pending-count` 等 | 任意已登录 |
+| | `POST /alerts/{id}/resolve` | `operator`、`admin` |
+| `stats/routes.py` | `GET /dashboard`、`GET /top-slow` 等查询 | 任意已登录 |
+| | `GET /reports/export`（CSV/PDF 导出） | `admin` |
+
+#### 7.5.4 数据级权限隔离（operator 仅看授权接口）
+
+**这是权限隔离的核心**。仅靠角色鉴权不够：operator 虽然能访问 `/api/apis`，但应只看到 admin 授权给他的接口。隔离通过 `ApiAuthorization` 表实现。
+
+**`ApiAuthorization` 表**（[models.py](file:///f:/day_20/backend/app/models/models.py)）：多对多关联 `api_id` ↔ `user_id`，`(api_id, user_id)` 联合唯一。admin 通过授权管理界面将接口授权给 operator。
+
+**隔离实现模式**（在查询时动态过滤）：
+
+```python
+# apis/routes.py — 接口列表
+if current_user.role == "operator":
+    auth_ids = [r[0] for r in db.query(ApiAuthorization.api_id)
+                .filter(ApiAuthorization.user_id == current_user.id).all()]
+    if auth_ids:
+        q = q.filter(Api.id.in_(auth_ids))
+    else:
+        return {"items": [], "total": 0, ...}  # 无授权则返回空
+
+# alerts/service.py — 告警列表 / 待处理数 / 今日数
+if current_user and current_user.role == "operator":
+    auth_ids = [...]
+    if auth_ids:
+        q = q.filter(Alert.api_id.in_(auth_ids))
+    else:
+        return [], 0
+
+# stats/service.py — 仪表盘统计
+if current_user and current_user.role == "operator":
+    auth_api_ids = [...]
+    if not auth_api_ids:
+        return {"total_apis": 0, "healthy_count": 0, ...}  # 无授权返回空统计
+    # 后续所有 query 都加 Api.id.in_(auth_api_ids) 过滤
+```
+
+**应用范围**：接口列表、告警列表、告警计数、仪表盘统计均对 operator 做了数据隔离。
+
+**接口授权管理**（admin 操作）：admin 通过 `PUT /api/apis/{api_id}/authorizations` 全量替换某接口的授权用户列表（先删旧、再增新），并写入审计日志：
+
+```python
+# apis/routes.py
+db.query(ApiAuthorization).filter(ApiAuthorization.api_id == api_id).delete()
+for uid in data.user_ids:
+    db.add(ApiAuthorization(api_id=api_id, user_id=uid))
+log_op(current_user.username, "authorize", "api", api_id, ...)
+```
+
+#### 7.5.5 前端权限控制（UI 层）
+
+前端权限控制仅为**体验优化**，非安全边界（可绕过），真正鉴权在后端。
+
+**路由守卫**（[AuthGuard.tsx](file:///f:/day_20/frontend/src/shared/AuthGuard.tsx)）：仅检查 token 是否存在，未登录跳转 `/login`。未做路由级角色限制（由各页面组件自行处理）。
+
+**HTTP 客户端**（[client.ts](file:///f:/day_20/frontend/src/shared/client.ts)）：axios 拦截器自动注入 `Authorization: Bearer <token>`；响应拦截器在 401 时清空 localStorage 并跳转登录页。
+
+**菜单权限**（[Layout.tsx](file:///f:/day_20/frontend/src/shared/Layout.tsx)）：非 admin 不显示"用户管理"菜单；用户下拉菜单中仅 admin 显示"下载审计日志"。
+
+**页面内 UI 控制**：
+
+| 页面 | 控制逻辑 | 效果 |
+|------|---------|------|
+| [ApiList.tsx](file:///f:/day_20/frontend/src/features/apis/ApiList.tsx) | `isAdmin` / `canCheck = role !== 'viewer'` | viewer 隐藏"巡检/测试"按钮；非 admin 隐藏"新增/编辑/删除/批量操作/导入/授权" |
+| [AlertList.tsx](file:///f:/day_20/frontend/src/features/alerts/AlertList.tsx) | `isViewer = role === 'viewer'` | viewer 隐藏告警"操作"列（无"解决"按钮） |
+| [Reports.tsx](file:///f:/day_20/frontend/src/features/stats/Reports.tsx) | `isAdmin` | 非 admin 隐藏"导出 CSV/PDF"按钮 |
+| [UserManage.tsx](file:///f:/day_20/frontend/src/features/users/UserManage.tsx) | `isAdmin` | 非 admin 访问时 `navigate('/dashboard')` 重定向 |
+| [Login.tsx](file:///f:/day_20/frontend/src/features/auth/Login.tsx) | `role === 'operator'` | operator 登录后默认跳转 `/apis`，其他角色跳转 `/dashboard` |
+
+**状态管理**（[auth/store.ts](file:///f:/day_20/frontend/src/features/auth/store.ts)）：Zustand store 持久化 token 和 user 到 localStorage，提供 `hasRole([...])` 工具方法供组件判断角色。
+
+#### 7.5.6 操作审计日志
+
+所有写操作（接口 CRUD、用户管理、授权变更、解决告警、手动巡检、报表导出）通过 [logger.py](file:///f:/day_20/backend/app/core/logger.py) 的 `log_op(user, action, target_type, target_id, detail, ip)` 写入 `logs/operation.log`，按日轮转保留 90 天，仅 admin 可在前端下载。这是权限隔离的事后追溯机制。
+
+#### 7.5.7 权限隔离链路图
+
+```
+[前端浏览器]                          [后端 FastAPI]
+    │                                      │
+    ├─ axios 请求带 Bearer Token ─────────► HTTPBearer(auto_error=False)
+    │                                      │
+    │                                      ├─ get_current_user（认证层）
+    │                                      │   解析 JWT → 查 User → 校验 enabled
+    │                                      │   失败: 401
+    │                                      │
+    │                                      ├─ require_role([...])（授权层）
+    │                                      │   校验 role 是否命中
+    │                                      │   失败: 403
+    │                                      │
+    │                                      ├─ 路由处理函数（数据隔离层）
+    │                                      │   if role == "operator":
+    │                                      │       filter(Api.id.in_(auth_ids))
+    │                                      │
+    │                                      └─ log_op（审计层）
+    │                                          写入 logs/operation.log
+    │
+    ├─ 401 响应 → client.ts 拦截器清 localStorage → 跳转 /login
+    └─ 403 响应 → 调用方 try/catch 自行 message.error 提示
+```
 
 ---
 

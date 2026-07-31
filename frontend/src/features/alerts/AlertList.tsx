@@ -39,8 +39,6 @@ export default function AlertList() {
       const res = await alertApi.list({ status, alert_type: alertType, api_id: apiId, page, page_size: 20 });
       setData(res.items || []);
       setTotal(res.total || 0);
-      // 同步更新通知铃铛的待处理告警计数
-      setPendingCount(res.total || 0);
     } catch { /* ignore */ } finally {
       setLoading(false);
     }
@@ -62,6 +60,7 @@ export default function AlertList() {
     try {
       const res = await alertApi.pendingCount();
       setPendingTotal(res.count || 0);
+      setPendingCount(res.count || 0);
     } catch { /* ignore */ }
   }, []);
   useEffect(() => { fetchPendingCount(); }, [fetchPendingCount]);

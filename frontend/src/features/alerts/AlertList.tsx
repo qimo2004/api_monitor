@@ -24,6 +24,7 @@ export default function AlertList() {
   );
   const [apis, setApis] = useState<ApiItem[]>([]);
   const setPendingCount = useAlertStore((s) => s.setPendingCount);
+  const triggerRefresh = useAlertStore((s) => s.triggerRefresh);
   const user = useAuthStore((s) => s.user);
   const isViewer = user?.role === 'viewer';
   const [todayNewTotal, setTodayNewTotal] = useState(0);
@@ -71,6 +72,7 @@ export default function AlertList() {
       message.success('告警已解决');
       fetchList();
       fetchPendingCount();
+      triggerRefresh();
     } catch { message.error('解决失败'); }
   };
 

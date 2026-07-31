@@ -11,6 +11,7 @@ export default function NotificationBell() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const pendingCount = useAlertStore((s) => s.pendingCount);
   const setPendingCount = useAlertStore((s) => s.setPendingCount);
+  const refreshTrigger = useAlertStore((s) => s.refreshTrigger);
   const prevAlertIds = useRef<Set<number>>(new Set());
   const [hasNewAlert, setHasNewAlert] = useState(false);
   const originTitle = 'API Monitor';
@@ -55,9 +56,12 @@ export default function NotificationBell() {
     } catch { /* ignore */ }
   };
 
+  // 首次加载 + 监听外部刷新触发（告警管理界面解决告警后）+ 定时轮询（30秒）
   useEffect(() => {
     fetchPending();
-  }, []);
+    const timer = setInterval(fetchPending, 30000);
+    return () => clearInterval(timer);
+  }, [refreshTrigger]);
 
   return (
     <Dropdown

@@ -2,12 +2,12 @@
 - Api: 接口配置表
 - CheckLog: 巡检日志表
 - Alert: 告警记录表
-- ApiStatsDaily: 接口日统计表
 - User: 用户表
+- ApiAuthorization: 接口授权表
 """
 import datetime
 from sqlalchemy import String, Text, Integer, SmallInteger, \
-    DateTime, Date, ForeignKey, Index
+    DateTime, ForeignKey, Index
 from sqlalchemy.orm import DeclarativeBase, relationship, Mapped, mapped_column
 from sqlalchemy.sql import func as sqlfunc
 
@@ -45,7 +45,6 @@ class Api(Base):
 
     check_logs: Mapped[list["CheckLog"]] = relationship(back_populates="api", cascade="all, delete-orphan")
     alerts: Mapped[list["Alert"]] = relationship(back_populates="api", cascade="all, delete-orphan")
-    daily_stats: Mapped[list["ApiStatsDaily"]] = relationship(back_populates="api", cascade="all, delete-orphan")
 
 
 class CheckLog(Base):
@@ -93,31 +92,6 @@ class Alert(Base):
     resolved_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True, comment="解决时间")
 
     api: Mapped["Api"] = relationship(back_populates="alerts")
-
-
-class ApiStatsDaily(Base):
-    """接口日统计表：预聚合的每日统计指标，用于报表查询"""
-    __tablename__ = "api_stats_daily"
-
-    __table_args__ = (
-        Index("idx_asd_api_id", "api_id"),
-        Index("idx_asd_date", "date"),
-        Index("idx_asd_api_date", "api_id", "date", unique=True),
-        {"comment": "接口日统计表"},
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="统计ID")
-    api_id: Mapped[int] = mapped_column(Integer, ForeignKey("apis.id", ondelete="CASCADE"), nullable=False, comment="关联接口ID")
-    date: Mapped[datetime.date] = mapped_column(Date, nullable=False, comment="统计日期")
-    total_checks: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="总巡检次数")
-    success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="成功次数")
-    failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="失败次数")
-    timeout_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="超时次数")
-    avg_response_time: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="平均响应时间(毫秒)")
-    max_response_time: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="最大响应时间(毫秒)")
-    min_response_time: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="最小响应时间(毫秒)")
-
-    api: Mapped["Api"] = relationship(back_populates="daily_stats")
 
 
 class User(Base):

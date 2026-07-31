@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>企业接口巡检与稳定性监控系统 · 项目介绍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Huly tokens */
+    --color-obsidian-canvas:#303236;
+    --color-void:#090a0c;
+    --color-charcoal-card:#111111;
+    --color-slate-edge:#4a4b50;
+    --color-iron-veil:#6b6c6d;
+    --color-smoke:#95979e;
+    --color-ash:#a9a9aa;
+    --color-frost:#d1d1d1;
+    --color-linen:#e5e5e7;
+    --color-snow:#ffffff;
+    --color-electric-iris:#5683da;
+    --color-ember-pulse:#ff8964;
+    --color-molasses:#5a250a;
+
+    --font-inter:'Inter',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --font-display:'Sora',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+
+    --radius-card:12px;
+    --radius-panel:30px;
+    --radius-pill:9999px;
+    --shadow-card:rgba(0,0,0,0.35) 0px 4px 16px 0px;
+    --shadow-float:rgba(0,0,0,0.5) 0px 6px 25px 0px;
+
+    --pad-x:72px;
+    --pad-y:69px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+
+  html,body{
+    height:100%;
+    background:#15161a;
+    font-family:var(--font-inter);
+    color:#fff;
+    overflow:hidden;
+  }
+
+  /* Canvas — fixed 1280×720, centered & scaled */
+  #canvas{
+    position:fixed;
+    top:50%; left:50%;
+    width:1280px; height:720px;
+    transform:translate(-50%,-50%) scale(1);
+    transform-origin:center center;
+    background:var(--color-obsidian-canvas);
+    color:#fff;
+    box-shadow:0 10px 60px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
+    overflow:hidden;
+  }
+
+  /* Slide base */
+  .slide{
+    position:absolute; inset:0;
+    padding:var(--pad-y) var(--pad-x);
+    display:grid;
+    opacity:0; visibility:hidden;
+    transition:opacity .5s cubic-bezier(.2,.7,.2,1), visibility .5s;
+  }
+  .slide.active{opacity:1; visibility:visible;}
+
+  /* Typography helpers — explicit colors */
+  .kicker{
+    font-family:var(--font-mono);
+    font-size:12.5px; font-weight:500;
+    letter-spacing:.18em; text-transform:uppercase;
+    color:var(--color-electric-iris);
+  }
+  .h-display{
+    font-family:var(--font-display);
+    font-weight:200; line-height:.96;
+    letter-spacing:-0.04em; color:#fff;
+  }
+  .h-1{
+    font-family:var(--font-display);
+    font-weight:300; line-height:1.05;
+    letter-spacing:-0.03em; color:#fff;
+    font-size:54px;
+  }
+  .h-2{
+    font-family:var(--font-display);
+    font-weight:400; line-height:1.15;
+    letter-spacing:-0.02em; color:#fff;
+    font-size:32px;
+  }
+  .lead{
+    font-family:var(--font-inter);
+    font-size:17px; line-height:1.6;
+    color:var(--color-ash); font-weight:400;
+  }
+  .body-text{
+    font-family:var(--font-inter);
+    font-size:15px; line-height:1.6;
+    color:var(--color-ash);
+  }
+
+  /* Chrome (inside canvas, position:absolute) */
+  .chrome-top{
+    position:absolute; top:28px; left:77px; right:77px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--font-mono);
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--color-smoke);
+    z-index:5;
+  }
+  .chrome-top .brand{color:var(--color-electric-iris); font-weight:500;}
+  .chrome-bottom{
+    position:absolute; bottom:28px; left:77px; right:77px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--font-mono);
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--color-smoke);
+    z-index:5;
+  }
+  .chrome-bottom .pg b{color:#fff; font-weight:500;}
+
+  /* Nav dots */
+  .nav-dots{
+    position:absolute; bottom:14px; left:50%;
+    transform:translateX(-50%);
+    display:flex; gap:8px;
+    z-index:6;
+  }
+  .nav-dot{
+    width:7px; height:7px; border-radius:var(--radius-pill);
+    background:var(--color-slate-edge); cursor:pointer;
+    transition:all .25s ease;
+    border:none; padding:0;
+  }
+  .nav-dot.active{
+    background:var(--color-electric-iris);
+    width:22px;
+  }
+  .nav-dot:hover{background:var(--color-ash);}
+
+  /* Staggered entrance */
+  .stagger > *{
+    opacity:0; transform:translateY(14px);
+    transition:opacity .6s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .slide.active .stagger > *{opacity:1; transform:translateY(0);}
+  .slide.active .stagger > *:nth-child(1){transition-delay:.08s;}
+  .slide.active .stagger > *:nth-child(2){transition-delay:.16s;}
+  .slide.active .stagger > *:nth-child(3){transition-delay:.24s;}
+  .slide.active .stagger > *:nth-child(4){transition-delay:.32s;}
+  .slide.active .stagger > *:nth-child(5){transition-delay:.40s;}
+  .slide.active .stagger > *:nth-child(6){transition-delay:.48s;}
+  .slide.active .stagger > *:nth-child(7){transition-delay:.56s;}
+
+  /* ============ T01-D Cover Hero (aurora, no photo) ============ */
+  .s-cover-hero{
+    grid-template-rows:1fr auto;
+    padding:0; overflow:hidden;
+    background:var(--color-void);
+  }
+  .s-cover-hero::before{
+    content:''; position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    background:
+      radial-gradient(ellipse 600px 400px at 22% 65%, rgba(255,137,100,0.22) 0%, transparent 60%),
+      linear-gradient(180deg,
+        rgba(86,131,218,0.0) 0%,
+        rgba(86,131,218,0.18) 35%,
+        rgba(255,137,100,0.25) 75%,
+        rgba(255,255,255,0.05) 100%),
+      var(--color-void);
+    z-index:1;
+  }
+  .s-cover-hero::after{
+    content:''; position:absolute;
+    top:8%; left:18%;
+    width:90px; height:560px;
+    background:linear-gradient(180deg,
+      rgba(86,131,218,0.85) 0%,
+      rgba(150,120,200,0.7) 45%,
+      rgba(255,137,100,0.85) 85%,
+      rgba(255,255,255,0.6) 100%);
+    filter:blur(22px);
+    border-radius:var(--radius-pill);
+    z-index:1;
+    opacity:.85;
+  }
+  .cover-hero-content{
+    position:relative; z-index:2;
+    padding:0 77px 28px; align-self:end;
+    max-width:78%;
+  }
+  .cover-hero-content .kicker{
+    color:var(--color-ember-pulse);
+    font-size:13px;
+  }
+  .cover-hero-content .h-display{
+    font-size:94px; margin-top:18px;
+  }
+  .cover-hero-content .lead{
+    margin-top:22px; max-width:54ch;
+    font-size:18px; color:var(--color-frost);
+  }
+  .cover-hero-meta{
+    position:relative; z-index:2;
+    padding:18px 77px 32px;
+    display:flex; justify-content:flex-end; gap:40px;
+    font-family:var(--font-mono);
+    font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--color-smoke);
+    border-top:1px solid rgba(74,75,80,.4);
+  }
+  .cover-hero-meta b{color:#fff; font-weight:500; margin-left:8px;}
+
+  /* ============ T03 Brand ============ */
+  .s-brand{grid-template-columns:1fr 1fr; gap:64px; align-items:center;}
+  .brand-left .h-1{margin-top:18px; font-size:52px;}
+  .brand-left .lead{margin-top:22px; max-width:46ch;}
+  .brand-stats{
+    margin-top:36px;
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:20px; padding-top:24px;
+    border-top:1px solid var(--color-slate-edge);
+  }
+  .brand-stats .k{
+    font-family:var(--font-display);
+    font-size:44px; font-weight:200;
+    color:#fff; letter-spacing:-0.03em;
+  }
+  .brand-stats .k b{color:var(--color-ember-pulse); font-weight:300;}
+  .brand-stats .lbl{
+    font-size:11px; margin-top:8px;
+    color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+  .brand-cards{
+    display:flex; flex-direction:column; gap:14px;
+    max-height:582px; overflow:hidden; align-content:center;
+  }
+  .brand-card{
+    padding:20px 24px;
+    background:var(--color-charcoal-card);
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    display:grid; grid-template-columns:46px 1fr auto;
+    gap:22px; align-items:center;
+  }
+  .brand-card .num{
+    font-family:var(--font-display);
+    font-size:32px; font-weight:200;
+    color:var(--color-electric-iris);
+  }
+  .brand-card .tag{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-ember-pulse);
+    text-transform:uppercase; letter-spacing:.12em;
+  }
+  .brand-card .title{
+    font-size:20px; font-weight:600;
+    color:#fff; margin-top:4px;
+  }
+  .brand-card .desc{
+    font-size:14px; margin-top:6px;
+    line-height:1.5; color:var(--color-ash);
+  }
+  .brand-card .badge{
+    font-size:10px; padding:5px 11px;
+    border-radius:var(--radius-pill);
+    border:1px solid var(--color-slate-edge);
+    color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+
+  /* ============ T23 Free Single (architecture / flow / ER) ============ */
+  .s-free-single{
+    grid-template-rows:auto auto; gap:22px;
+    height:100%; align-content:center;
+  }
+  .free-head{
+    display:grid; grid-template-columns:auto 1fr;
+    align-items:end; gap:32px;
+  }
+  .free-head .h-1{font-size:48px; line-height:1.1; margin-top:12px;}
+  .free-head .lead{max-width:48ch; font-size:16px; align-self:end;}
+  .free-body{
+    display:flex; flex-direction:column; gap:16px;
+    overflow:hidden;
+  }
+
+  /* Architecture diagram */
+  .arch-diagram{
+    background:var(--color-charcoal-card);
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    padding:24px 28px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .arch-layer{
+    border:1px solid var(--color-slate-edge);
+    border-radius:10px;
+    padding:12px 16px;
+    background:rgba(9,10,12,0.5);
+  }
+  .arch-layer.frontend{
+    border-color:rgba(86,131,218,0.4);
+  }
+  .arch-layer.backend{
+    border-color:rgba(255,137,100,0.35);
+  }
+  .arch-layer.data{
+    border-color:var(--color-slate-edge);
+  }
+  .arch-layer-title{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.14em;
+    margin-bottom:8px;
+  }
+  .arch-layer.frontend .arch-layer-title{color:var(--color-electric-iris);}
+  .arch-layer.backend .arch-layer-title{color:var(--color-ember-pulse);}
+  .arch-modules{
+    display:grid; grid-template-columns:repeat(6,1fr);
+    gap:8px;
+  }
+  .arch-mod{
+    background:rgba(86,131,218,0.08);
+    border:1px solid rgba(86,131,218,0.25);
+    border-radius:6px;
+    padding:8px 6px;
+    text-align:center;
+    font-size:11px; color:var(--color-frost);
+    font-weight:500;
+  }
+  .arch-layer.backend .arch-mod{
+    background:rgba(255,137,100,0.08);
+    border-color:rgba(255,137,100,0.25);
+  }
+  .arch-arrow{
+    text-align:center;
+    color:var(--color-iron-veil);
+    font-size:14px;
+    font-family:var(--font-mono);
+  }
+  .arch-data-row{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  .arch-data-cell{
+    border:1px dashed var(--color-slate-edge);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:12px; color:var(--color-ash);
+  }
+  .arch-data-cell b{color:#fff; font-weight:500;}
+
+  /* ============ T05 Team Cards (tech stack) ============ */
+  .s-team{grid-template-columns:38% 1fr; gap:64px; align-items:center;}
+  .s-team .h-1{margin-top:18px; font-size:52px;}
+  .s-team .lead{margin-top:22px; max-width:42ch;}
+  .team-cards{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:18px;
+    max-height:582px; overflow:hidden; align-content:center;
+  }
+  .team-card{
+    padding:24px;
+    background:var(--color-charcoal-card);
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    min-height:168px;
+    display:flex; flex-direction:column; gap:10px;
+    position:relative; overflow:hidden;
+  }
+  .team-card::after{
+    content:''; position:absolute;
+    top:-40px; right:-40px;
+    width:120px; height:120px; border-radius:50%;
+    background:radial-gradient(circle, rgba(86,131,218,0.18) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .team-card.warm::after{
+    background:radial-gradient(circle, rgba(255,137,100,0.18) 0%, transparent 70%);
+  }
+  .team-card .idx{
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-electric-iris);
+    letter-spacing:.1em;
+  }
+  .team-card.warm .idx{color:var(--color-ember-pulse);}
+  .team-card .title{
+    font-family:var(--font-display);
+    font-size:23px; font-weight:500;
+    color:#fff; letter-spacing:-0.02em;
+  }
+  .team-card .en-sub{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+    margin-top:2px;
+  }
+  .team-card .desc{
+    font-size:14px; line-height:1.55;
+    color:var(--color-ash);
+    margin-top:auto;
+  }
+  .team-card .tech-list{
+    display:flex; flex-wrap:wrap; gap:5px;
+    margin-top:6px;
+  }
+  .tech-chip{
+    font-family:var(--font-mono);
+    font-size:10px; padding:3px 9px;
+    border-radius:var(--radius-pill);
+    background:rgba(86,131,218,0.12);
+    color:var(--color-electric-iris);
+    border:1px solid rgba(86,131,218,0.25);
+  }
+  .team-card.warm .tech-chip{
+    background:rgba(255,137,100,0.12);
+    color:var(--color-ember-pulse);
+    border-color:rgba(255,137,100,0.25);
+  }
+
+  /* ============ T04 Grid Lines (core features) ============ */
+  .s-lines{
+    display:flex !important;
+    flex-direction:column; justify-content:center; gap:28px;
+  }
+  .lines-head{
+    display:grid; grid-template-columns:1fr auto;
+    align-items:end; gap:32px;
+  }
+  .lines-head .h-1{font-size:48px; margin-top:10px;}
+  .lines-head .lead{font-size:16px; max-width:42ch;}
+  .lines-grid{
+    display:grid; grid-template-columns:repeat(5,1fr);
+    gap:1px; overflow:hidden;
+    background:var(--color-slate-edge);
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    flex-shrink:0;
+  }
+  .line-cell{
+    padding:24px 20px 22px;
+    display:flex; flex-direction:column; gap:8px;
+    background:var(--color-charcoal-card);
+    position:relative;
+    min-height:280px;
+  }
+  .line-cell .num{
+    font-family:var(--font-display);
+    font-size:28px; font-weight:200;
+    color:var(--color-electric-iris);
+    position:absolute; top:18px; right:18px;
+  }
+  .line-cell .name{
+    font-family:var(--font-display);
+    font-size:20px; font-weight:600;
+    color:#fff; letter-spacing:-0.02em;
+    margin-top:6px;
+  }
+  .line-cell .en{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+  .line-cell .icon{
+    width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--color-ember-pulse);
+    margin-bottom:4px;
+  }
+  .line-cell .desc{
+    font-size:13px; line-height:1.55;
+    color:var(--color-ash);
+    margin-top:10px;
+  }
+  .line-cell .accent{
+    font-family:var(--font-mono);
+    font-size:9px; color:var(--color-electric-iris);
+    text-transform:uppercase; letter-spacing:.12em;
+    margin-top:auto; padding-top:10px;
+    border-top:1px solid var(--color-slate-edge);
+  }
+
+  /* ============ T10 Feature Split (data model) ============ */
+  .s-feature{
+    grid-template-columns:55% 1fr;
+    gap:48px; align-items:center;
+  }
+  .feature-img{
+    border-radius:var(--radius-card);
+    overflow:hidden;
+    max-height:582px;
+    border:1px solid var(--color-slate-edge);
+    background:var(--color-charcoal-card);
+    padding:20px;
+  }
+  .er-svg{width:100%; height:100%; display:block;}
+  .feature-text{max-height:582px; overflow:hidden; align-self:center;}
+  .feature-text .kicker{font-size:11px;}
+  .feature-text .h-1{
+    font-size:44px; line-height:1.1;
+    margin-top:12px;
+  }
+  .feature-text .lead{
+    margin-top:16px; max-width:42ch; font-size:15.5px;
+  }
+  .feature-points{margin-top:24px;}
+  .feature-point{
+    display:grid; grid-template-columns:48px 1fr;
+    gap:16px; padding:12px 0;
+    border-bottom:1px solid var(--color-slate-edge);
+  }
+  .feature-point:last-child{border-bottom:none;}
+  .feature-point .idx{
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-electric-iris);
+    padding-top:4px; letter-spacing:.1em;
+  }
+  .feature-point .h{
+    font-size:17px; font-weight:600;
+    color:#fff;
+  }
+  .feature-point .d{
+    font-size:13.5px; margin-top:4px;
+    line-height:1.55; color:var(--color-ash);
+  }
+
+  /* ============ T22 Info Dashboard (business flow) ============ */
+  .s-dashboard{
+    grid-template-rows:auto auto 1fr;
+    gap:16px; align-content:center;
+  }
+  .dash-head{
+    display:grid; grid-template-columns:auto 1fr;
+    align-items:end; gap:32px;
+  }
+  .dash-head .h-1{font-size:48px; line-height:1.1; margin-top:10px;}
+  .dash-head .lead{font-size:16px; max-width:48ch; align-self:end;}
+  .dash-metrics{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:12px;
+  }
+  .dash-metric{
+    padding:14px 18px;
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    background:var(--color-charcoal-card);
+  }
+  .dm-value{
+    font-family:var(--font-display);
+    font-size:28px; font-weight:300;
+    color:#fff; letter-spacing:-0.02em;
+    display:block;
+  }
+  .dm-value b{color:var(--color-ember-pulse); font-weight:300;}
+  .dm-label{
+    font-family:var(--font-mono);
+    font-size:10px; margin-top:4px;
+    color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+  .dash-body{
+    display:grid; grid-template-columns:1.4fr 1fr;
+    gap:18px; min-height:0;
+  }
+  .dash-chart{
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    padding:16px 18px;
+    background:var(--color-charcoal-card);
+    display:flex; flex-direction:column; gap:10px;
+    min-height:0;
+  }
+  .dash-chart-title{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.12em;
+  }
+  .flow-svg{width:100%; height:100%; flex:1; min-height:0;}
+  .dash-highlights{
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    padding:14px 18px;
+    background:var(--color-charcoal-card);
+    display:flex; flex-direction:column;
+    min-height:0;
+  }
+  .dash-highlights-title{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.12em;
+    margin-bottom:6px;
+  }
+  .dash-item{
+    display:grid; grid-template-columns:10px 1fr;
+    gap:12px; padding:9px 0;
+    border-bottom:1px solid var(--color-slate-edge);
+  }
+  .dash-item:last-child{border-bottom:none;}
+  .dash-dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--color-electric-iris);
+    margin-top:5px;
+  }
+  .dash-item.warm .dash-dot{background:var(--color-ember-pulse);}
+  .dash-h{
+    font-size:14.5px; font-weight:600;
+    color:#fff;
+  }
+  .dash-d{
+    font-size:12.5px; margin-top:2px;
+    line-height:1.5; color:var(--color-ash);
+  }
+
+  /* ============ T18 Dense Table (permissions) ============ */
+  .s-dense-table{
+    grid-template-rows:auto auto;
+    align-content:center; gap:22px;
+  }
+  .dense-head{
+    display:grid; grid-template-columns:auto 1fr;
+    align-items:end; gap:32px;
+  }
+  .dense-head .h-1{font-size:48px; line-height:1.1; margin-top:12px;}
+  .dense-head .lead{font-size:16px; max-width:48ch; align-self:end;}
+  .dense-table{
+    display:flex; flex-direction:column;
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    overflow:hidden;
+  }
+  .dt-row{
+    display:grid;
+    grid-template-columns:2.2fr 1fr 1fr 1fr;
+    padding:14px 22px;
+    border-bottom:1px solid var(--color-slate-edge);
+    align-items:center;
+    font-size:15px;
+    color:var(--color-frost);
+  }
+  .dt-row:last-child{border-bottom:none;}
+  .dt-header{
+    font-family:var(--font-mono);
+    font-size:10px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.12em;
+    background:rgba(9,10,12,0.6);
+    color:var(--color-smoke);
+  }
+  .dt-row:nth-child(even):not(.dt-header){
+    background:rgba(9,10,12,0.25);
+  }
+  .dt-label{
+    font-weight:600; color:#fff;
+    font-size:15.5px;
+  }
+  .dt-cell-yes{color:var(--color-electric-iris); font-weight:600;}
+  .dt-cell-no{color:var(--color-iron-veil);}
+  .dt-cell-partial{color:var(--color-ember-pulse); font-size:13px;}
+  .role-cell{
+    display:flex; flex-direction:column;
+    align-items:center; gap:2px;
+  }
+  .role-cell .role-name{
+    font-family:var(--font-display);
+    font-size:15px; font-weight:500;
+    color:#fff;
+  }
+  .role-cell .role-tag{
+    font-family:var(--font-mono);
+    font-size:9px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.1em;
+  }
+
+  /* ============ T06 Refine List (run) ============ */
+  .s-refine{
+    grid-template-columns:34% 1fr;
+    gap:64px; align-items:center;
+  }
+  .s-refine .h-1{margin-top:18px; font-size:50px;}
+  .s-refine .lead{margin-top:22px; max-width:36ch;}
+  .refine-list{
+    display:flex; flex-direction:column;
+    align-content:center;
+    max-height:582px; overflow:hidden;
+  }
+  .refine-item{
+    display:grid; grid-template-columns:90px 1fr;
+    gap:28px; padding:16px 0;
+    align-items:start;
+    border-bottom:1px solid var(--color-slate-edge);
+  }
+  .refine-item:last-child{border-bottom:none;}
+  .refine-item .idx{
+    font-family:var(--font-mono);
+    font-size:11px; padding-top:5px;
+    color:var(--color-electric-iris);
+    letter-spacing:.1em;
+  }
+  .refine-item .idx b{color:var(--color-ember-pulse); font-weight:500;}
+  .refine-item .h{
+    font-family:var(--font-display);
+    font-size:20px; font-weight:600;
+    color:#fff; letter-spacing:-0.02em;
+  }
+  .refine-item .d{
+    font-size:14px; line-height:1.55;
+    margin-top:5px; color:var(--color-ash);
+    max-width:60ch;
+  }
+  .code-block{
+    margin-top:8px;
+    padding:10px 14px;
+    background:var(--color-void);
+    border:1px solid var(--color-slate-edge);
+    border-radius:8px;
+    font-family:var(--font-mono);
+    font-size:13px; line-height:1.65;
+    color:var(--color-frost);
+    overflow:hidden;
+  }
+  .code-block .cm-comment{color:var(--color-iron-veil);}
+  .code-block .cm-cmd{color:var(--color-ember-pulse);}
+  .code-block .cm-out{color:var(--color-electric-iris);}
+
+  /* ============ Backend Architecture (free) ============ */
+  .backend-grid{
+    display:grid; grid-template-columns:1fr 1.1fr 1.1fr;
+    gap:16px; min-height:0;
+  }
+  .be-col{
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    background:var(--color-charcoal-card);
+    padding:18px 20px;
+    display:flex; flex-direction:column; gap:10px;
+    min-height:0; max-height:520px; overflow:hidden;
+  }
+  .be-col-title{
+    font-family:var(--font-mono);
+    font-size:11.5px; color:var(--color-electric-iris);
+    text-transform:uppercase; letter-spacing:.12em;
+  }
+  .be-col.warm .be-col-title{color:var(--color-ember-pulse);}
+  .be-col-sub{
+    font-family:var(--font-display);
+    font-size:19px; font-weight:500;
+    color:#fff; letter-spacing:-0.02em;
+    margin-bottom:4px;
+  }
+  .be-item{
+    padding:11px 13px;
+    border:1px solid var(--color-slate-edge);
+    border-radius:8px;
+    background:rgba(9,10,12,0.4);
+  }
+  .be-item .h{
+    font-size:14.5px; font-weight:600; color:#fff;
+  }
+  .be-item .d{
+    font-size:12.5px; margin-top:3px; line-height:1.5;
+    color:var(--color-ash);
+  }
+  .be-item .tag{
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-ember-pulse);
+    letter-spacing:.06em; font-weight:500;
+  }
+
+  /* ============ Backend Endpoints Table ============ */
+  .s-be-table{
+    grid-template-rows:auto auto;
+    align-content:center; gap:22px;
+  }
+  .be-table{
+    display:flex; flex-direction:column;
+    border:1px solid var(--color-slate-edge);
+    border-radius:var(--radius-card);
+    overflow:hidden;
+  }
+  .be-row{
+    display:grid;
+    grid-template-columns:1.1fr 0.9fr 1.3fr 2.1fr 1.3fr;
+    padding:14px 20px;
+    border-bottom:1px solid var(--color-slate-edge);
+    align-items:center;
+    font-size:14px;
+    color:var(--color-frost);
+  }
+  .be-row:last-child{border-bottom:none;}
+  .be-row.be-header{
+    font-family:var(--font-mono);
+    font-size:11px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.12em;
+    background:rgba(9,10,12,0.6);
+    color:var(--color-smoke);
+  }
+  .be-row:nth-child(even):not(.be-header){
+    background:rgba(9,10,12,0.25);
+  }
+  .be-mod{
+    font-family:var(--font-display);
+    font-weight:600; color:#fff; font-size:15.5px;
+  }
+  .be-mod .en{
+    display:block; font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    font-weight:400; letter-spacing:.1em;
+    text-transform:uppercase; margin-top:2px;
+  }
+  .be-prefix{
+    font-family:var(--font-mono);
+    font-size:13px; color:var(--color-electric-iris);
+  }
+  .be-svc{
+    font-family:var(--font-mono);
+    font-size:13px; color:var(--color-ember-pulse);
+  }
+  .be-methods{
+    font-family:var(--font-mono);
+    font-size:12.5px; color:var(--color-ash);
+    line-height:1.5;
+  }
+  .be-role{font-size:13.5px; color:var(--color-ash);}
+
+  /* ============ T08 Closing ============ */
+  .s-close{
+    grid-template-columns:1fr 1fr;
+    padding:0;
+  }
+  .close-left{
+    padding:28px 46px 28px 77px;
+    background:var(--color-void);
+    position:relative;
+    display:flex; flex-direction:column;
+    justify-content:space-between;
+    overflow:hidden;
+  }
+  .close-left::before{
+    content:''; position:absolute;
+    top:10%; left:60%;
+    width:80px; height:480px;
+    background:linear-gradient(180deg,
+      rgba(86,131,218,0.6) 0%,
+      rgba(255,137,100,0.5) 80%,
+      transparent 100%);
+    filter:blur(20px);
+    border-radius:var(--radius-pill);
+    pointer-events:none;
+  }
+  .close-right{
+    padding:28px 77px 28px 46px;
+    background:var(--color-obsidian-canvas);
+    display:flex; flex-direction:column;
+    justify-content:space-between;
+  }
+  .chrome-min{
+    display:flex; justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.14em;
+    position:relative; z-index:2;
+  }
+  .manifesto{
+    position:relative; z-index:2;
+    max-width:90%;
+  }
+  .manifesto .meta{
+    font-family:var(--font-mono);
+    font-size:10px; color:var(--color-ember-pulse);
+    text-transform:uppercase; letter-spacing:.16em;
+    margin-bottom:14px;
+  }
+  .manifesto h2{
+    font-family:var(--font-display);
+    font-size:62px; font-weight:200;
+    line-height:1.02; letter-spacing:-0.04em;
+    color:#fff;
+  }
+  .manifesto h2 em{
+    font-style:normal;
+    background:linear-gradient(90deg, var(--color-electric-iris), var(--color-ember-pulse));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .manifesto .sub{
+    font-size:16px; margin-top:14px;
+    color:var(--color-ash); line-height:1.6;
+    max-width:38ch;
+  }
+  .sig{
+    display:flex; justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--color-smoke);
+    text-transform:uppercase; letter-spacing:.12em;
+    position:relative; z-index:2;
+  }
+  .sig b{color:#fff; font-weight:500;}
+  .takeaways{
+    display:flex; flex-direction:column;
+    gap:0;
+  }
+  .take-item{
+    display:grid; grid-template-columns:auto 1fr;
+    gap:22px; padding:18px 0;
+    border-bottom:1px solid var(--color-slate-edge);
+  }
+  .take-item:first-child{padding-top:6px;}
+  .take-item:last-child{border-bottom:none;}
+  .take-item .num{
+    font-family:var(--font-display);
+    font-size:46px; font-weight:200;
+    color:var(--color-electric-iris);
+    line-height:1;
+  }
+  .take-item h3{
+    font-family:var(--font-display);
+    font-size:21px; font-weight:600;
+    color:#fff; letter-spacing:-0.02em;
+    margin-bottom:6px;
+  }
+  .take-item p{
+    font-size:14.5px; line-height:1.55;
+    color:var(--color-ash);
+  }
+  .foot{
+    font-family:var(--font-mono);
+    font-size:12px; color:var(--color-ember-pulse);
+    text-transform:uppercase; letter-spacing:.14em;
+    padding-top:14px;
+  }
+  /* Suppress deck chrome on close slide */
+  .deck:has(.s-close.active) .chrome-top,
+  .deck:has(.s-close.active) .chrome-bottom{
+    opacity:0; visibility:hidden;
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="canvas">
+
+  <!-- Persistent chrome -->
+  <div class="chrome-top">
+    <span class="brand">API Monitor</span>
+    <span>企业接口巡检与稳定性监控系统 / 2026</span>
+  </div>
+  <div class="chrome-bottom">
+    <span>Project Introduction</span>
+    <span class="pg"><b id="pgCur">01</b> / 12</span>
+  </div>
+
+  <!-- Nav dots -->
+  <div class="nav-dots" id="navDots"></div>
+
+  <!-- ============ Slide 1 · Cover Hero ============ -->
+  <section class="slide s-cover-hero active" data-title="封面">
+    <div class="cover-hero-content stagger">
+      <span class="kicker">API MONITORING · STABILITY GUARD</span>
+      <h1 class="h-display">企业接口巡检与<br>稳定性监控系统</h1>
+      <p class="lead">面向核心 API 的端到端可观测性平台 — 自动化巡检、智能告警、SLA 统计与角色化运维协作，让每一次接口抖动都被看见、被响应、被闭环。</p>
+    </div>
+    <div class="cover-hero-meta">
+      <span>VERSION<b>v1.0</b></span>
+      <span>STACK<b>FastAPI · React 19</b></span>
+      <span>DATE<b>2026.07</b></span>
+    </div>
+  </section>
+
+  <!-- ============ Slide 2 · Overview (T03 Brand) ============ -->
+  <section class="slide s-brand" data-title="项目概述">
+    <div class="brand-left stagger">
+      <span class="kicker">01 / Overview · 项目概述</span>
+      <h1 class="h-1">让每一个核心 API<br>都被持续守护</h1>
+      <p class="lead">本系统是一个轻量级企业接口巡检与稳定性监控平台，采用前后端分离架构，对核心 API 接口实现自动化监控、异常告警与稳定性分析，帮助运维团队从被动救火转向主动保障。</p>
+      <div class="brand-stats">
+        <div>
+          <div class="k"><b>6</b></div>
+          <div class="lbl">数据表 / Models</div>
+        </div>
+        <div>
+          <div class="k"><b>5</b></div>
+          <div class="lbl">业务模块 / Modules</div>
+        </div>
+        <div>
+          <div class="k"><b>3</b></div>
+          <div class="lbl">角色权限 / Roles</div>
+        </div>
+      </div>
+    </div>
+    <div class="brand-cards stagger">
+      <div class="brand-card">
+        <div class="num">01</div>
+        <div>
+          <div class="tag">POSITIONING</div>
+          <div class="title">轻量级监控平台</div>
+          <div class="desc">SQLite 零配置部署，FastAPI 异步驱动，单机即可承载企业内部接口巡检任务。</div>
+        </div>
+        <div class="badge">Backend</div>
+      </div>
+      <div class="brand-card">
+        <div class="num">02</div>
+        <div>
+          <div class="tag">CAPABILITY</div>
+          <div class="title">端到端可观测</div>
+          <div class="desc">覆盖接口 CRUD、定时/手动巡检、日志查询、告警通知、SLA 统计、报表导出全链路。</div>
+        </div>
+        <div class="badge">Full-Stack</div>
+      </div>
+      <div class="brand-card">
+        <div class="num">03</div>
+        <div>
+          <div class="tag">OPERATION</div>
+          <div class="title">角色化运维协作</div>
+          <div class="desc">admin / operator / viewer 三级权限，接口授权精细化，告警升级与邮件通知闭环。</div>
+        </div>
+        <div class="badge">RBAC</div>
+      </div>
+      <div class="brand-card">
+        <div class="num">04</div>
+        <div>
+          <div class="tag">EXTENSIBILITY</div>
+          <div class="title">可扩展通知渠道</div>
+          <div class="desc">NotificationChannel 抽象基类，当前实现审计日志 + 邮件，可平滑对接钉钉/企业微信。</div>
+        </div>
+        <div class="badge">Plugin</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 3 · Architecture (T23 Free Single) ============ -->
+  <section class="slide s-free-single" data-title="系统架构">
+    <div class="free-head stagger">
+      <div>
+        <span class="kicker">02 / Architecture · 系统架构</span>
+        <h1 class="h-1">前后端分离 · 分层职责清晰</h1>
+      </div>
+      <p class="lead">React SPA 通过 Bearer JWT 与 FastAPI 通信；后端按 feature 模块组织，路由层 → 服务层 → 模型层 + 核心基础设施层，APScheduler 驱动定时巡检。</p>
+    </div>
+    <div class="free-body stagger">
+      <div class="arch-diagram">
+        <div class="arch-layer frontend">
+          <div class="arch-layer-title">FRONTEND · React 19 SPA (Vite :5173)</div>
+          <div class="arch-modules">
+            <div class="arch-mod">Login</div>
+            <div class="arch-mod">Dashboard</div>
+            <div class="arch-mod">ApiList</div>
+            <div class="arch-mod">LogList</div>
+            <div class="arch-mod">AlertList</div>
+            <div class="arch-mod">Reports</div>
+          </div>
+        </div>
+        <div class="arch-arrow">▼ HTTP · Authorization: Bearer &lt;JWT&gt;</div>
+        <div class="arch-layer backend">
+          <div class="arch-layer-title">BACKEND · FastAPI (:8000) · api/router.py 聚合 5 个 feature</div>
+          <div class="arch-modules">
+            <div class="arch-mod">auth 认证</div>
+            <div class="arch-mod">apis 巡检引擎</div>
+            <div class="arch-mod">logs 日志</div>
+            <div class="arch-mod">alerts 告警</div>
+            <div class="arch-mod">stats 统计</div>
+            <div class="arch-mod">core 基础设施</div>
+          </div>
+        </div>
+        <div class="arch-arrow">▼ SQLAlchemy ORM</div>
+        <div class="arch-data-row">
+          <div class="arch-data-cell"><b>SQLite</b> · 5 张表 (apis / check_logs / alerts / users / api_authorizations)</div>
+          <div class="arch-data-cell"><b>外部 API</b> · httpx.AsyncClient 异步巡检 · 并发信号量 20</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 4 · Tech Stack (T05 Team Cards) ============ -->
+  <section class="slide s-team" data-title="技术栈">
+    <div class="stagger">
+      <span class="kicker">03 / Tech Stack · 技术栈</span>
+      <h1 class="h-1">现代双栈<br>稳定与效率兼得</h1>
+      <p class="lead">后端选型强调异步与开发效率，前端选型强调组件生态与类型安全，二者通过 OpenAPI + JWT 衔接。</p>
+    </div>
+    <div class="team-cards stagger">
+      <div class="team-card">
+        <span class="idx">— 01</span>
+        <div class="title">后端框架</div>
+        <div class="en-sub">FastAPI · Async Web</div>
+        <div class="desc">异步 Web 框架，自动生成 OpenAPI 文档，pydantic 数据校验，uvicorn ASGI 服务器。</div>
+        <div class="tech-list">
+          <span class="tech-chip">FastAPI 0.115</span>
+          <span class="tech-chip">uvicorn</span>
+          <span class="tech-chip">pydantic 2.9</span>
+        </div>
+      </div>
+      <div class="team-card warm">
+        <span class="idx">— 02</span>
+        <div class="title">数据与调度</div>
+        <div class="en-sub">ORM · Scheduler · Mail</div>
+        <div class="desc">SQLAlchemy 2.0 声明式 ORM，APScheduler 定时巡检，SMTP 邮件通知，fpdf2 报表导出。</div>
+        <div class="tech-list">
+          <span class="tech-chip">SQLAlchemy 2.0</span>
+          <span class="tech-chip">APScheduler</span>
+          <span class="tech-chip">fpdf2</span>
+        </div>
+      </div>
+      <div class="team-card warm">
+        <span class="idx">— 03</span>
+        <div class="title">前端框架</div>
+        <div class="en-sub">React 19 · TypeScript</div>
+        <div class="desc">React 19 + TypeScript 6 + Vite 8 构建，React Router v7 路由，Zustand 轻量状态管理。</div>
+        <div class="tech-list">
+          <span class="tech-chip">React 19</span>
+          <span class="tech-chip">Vite 8</span>
+          <span class="tech-chip">Zustand</span>
+        </div>
+      </div>
+      <div class="team-card">
+        <span class="idx">— 04</span>
+        <div class="title">UI 与可视化</div>
+        <div class="en-sub">Ant Design · ECharts</div>
+        <div class="desc">Ant Design 6 企业级组件库，ECharts 图表可视化，dayjs 时间处理，xlsx 导入导出。</div>
+        <div class="tech-list">
+          <span class="tech-chip">antd 6</span>
+          <span class="tech-chip">ECharts</span>
+          <span class="tech-chip">axios</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 5 · Core Features (T04 Grid Lines) ============ -->
+  <section class="slide s-lines" data-title="核心功能">
+    <div class="lines-head stagger">
+      <div>
+        <span class="kicker">04 / Core Features · 核心功能</span>
+        <h1 class="h-1">五大模块 · 全链路覆盖</h1>
+      </div>
+      <p class="lead">从接口接入到告警闭环，五大业务模块各司其职，按 feature 切分代码，路由 + 服务 + 模型三层结构。</p>
+    </div>
+    <div class="lines-grid stagger">
+      <div class="line-cell">
+        <span class="num">01</span>
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </div>
+        <div class="name">接口管理</div>
+        <div class="en">API MANAGEMENT</div>
+        <div class="desc">CRUD + 批量操作 + Excel 导入 + 手动巡检 + 接口授权，支持 GET/POST/PUT/PATCH/DELETE 全方法。</div>
+        <div class="accent">features/apis</div>
+      </div>
+      <div class="line-cell">
+        <span class="num">02</span>
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <div class="name">巡检引擎</div>
+        <div class="en">CHECK ENGINE</div>
+        <div class="desc">APScheduler 每 60s 全量巡检，httpx 异步请求 + 3 次重试（2s/4s/6s），并发信号量 20，写 CheckLog。</div>
+        <div class="accent">CheckService</div>
+      </div>
+      <div class="line-cell">
+        <span class="num">03</span>
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 20h20L12 2z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        </div>
+        <div class="name">告警管理</div>
+        <div class="en">ALERT MANAGEMENT</div>
+        <div class="desc">三类告警（超时/状态码/连续失败）+ 聚合去重 + 自动恢复 + 手动解决 + 升级通知 + 邮件闭环。</div>
+        <div class="accent">AlertService</div>
+      </div>
+      <div class="line-cell">
+        <span class="num">04</span>
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+        </div>
+        <div class="name">统计分析</div>
+        <div class="en">STATS &amp; SLA</div>
+        <div class="desc">仪表盘概览 + 单接口 SLA + 多接口对比 + 最慢/最不稳定 TOP N + CSV/PDF 报表导出。</div>
+        <div class="accent">StatsService</div>
+      </div>
+      <div class="line-cell">
+        <span class="num">05</span>
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="name">认证鉴权</div>
+        <div class="en">AUTH &amp; RBAC</div>
+        <div class="desc">JWT 24h 有效期 + bcrypt 哈希 + 三级角色（admin/operator/viewer）+ 操作审计日志按日轮转。</div>
+        <div class="accent">core/security</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 6 · Backend Architecture (T23 Free Single) ============ -->
+  <section class="slide s-free-single" data-title="后端架构">
+    <div class="free-head stagger">
+      <div>
+        <span class="kicker">05 / Backend Architecture · 后端架构</span>
+        <h1 class="h-1">入口 · 核心层 · 路由聚合</h1>
+      </div>
+      <p class="lead">main.py 承担启动编排，core 层封装横切关注点，api/router.py 聚合 5 个 feature 模块 — 三层职责清晰、解耦可测。</p>
+    </div>
+    <div class="free-body stagger">
+      <div class="backend-grid">
+        <div class="be-col">
+          <div class="be-col-title">ENTRY · 入口</div>
+          <div class="be-col-sub">app/main.py</div>
+          <div class="be-item">
+            <div class="h">① 自动建表</div>
+            <div class="d">startup 事件 Base.metadata.create_all 初始化 5 张表。</div>
+          </div>
+          <div class="be-item">
+            <div class="h">② 启动调度器</div>
+            <div class="d">初始化 APScheduler，注册 60s 全量巡检任务。</div>
+          </div>
+          <div class="be-item">
+            <div class="h">③ 审计日志轮转</div>
+            <div class="d">TimedRotatingFileHandler 按日轮转，保留 30 天。</div>
+          </div>
+        </div>
+        <div class="be-col warm">
+          <div class="be-col-title">CORE · 核心层</div>
+          <div class="be-col-sub">app/core/</div>
+          <div class="be-item">
+            <div class="tag">config.py</div>
+            <div class="d">Settings 配置：DB / JWT / SMTP / CORS。</div>
+          </div>
+          <div class="be-item">
+            <div class="tag">security.py</div>
+            <div class="d">JWT 签发验证 + bcrypt 哈希 + 角色权限校验。</div>
+          </div>
+          <div class="be-item">
+            <div class="tag">deps.py</div>
+            <div class="d">FastAPI 依赖注入：get_db / get_current_user。</div>
+          </div>
+          <div class="be-item">
+            <div class="tag">logger.py + email_notifier.py</div>
+            <div class="d">审计日志 + SMTP 邮件通知 NotificationChannel。</div>
+          </div>
+        </div>
+        <div class="be-col">
+          <div class="be-col-title">ROUTER · 路由聚合</div>
+          <div class="be-col-sub">api/router.py</div>
+          <div class="be-item">
+            <div class="h">聚合 5 个 feature</div>
+            <div class="d">include_router 挂载 auth / apis / logs / alerts / stats。</div>
+          </div>
+          <div class="be-item">
+            <div class="h">统一前缀 /api</div>
+            <div class="d">业务端点统一 /api 前缀，tags 自动生成 OpenAPI 文档。</div>
+          </div>
+          <div class="be-item">
+            <div class="h">分层依赖链</div>
+            <div class="d">router → endpoint → service → model，单向依赖可测。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 7 · Backend Services & API (T18 Dense Table) ============ -->
+  <section class="slide s-be-table" data-title="后端服务">
+    <div class="dense-head stagger">
+      <div>
+        <span class="kicker">06 / Backend Services · 后端服务与 API</span>
+        <h1 class="h-1">5 模块 · 服务类 · 端点</h1>
+      </div>
+      <p class="lead">每个 feature 模块按 router → service → model 三层组织，核心业务逻辑封装在 Service 类中，与路由解耦。</p>
+    </div>
+    <div class="be-table stagger">
+      <div class="be-row be-header">
+        <span>模块 / Module</span>
+        <span>路由前缀</span>
+        <span>核心服务类</span>
+        <span>关键方法 / 端点</span>
+        <span>职责</span>
+      </div>
+      <div class="be-row">
+        <span class="be-mod">认证模块<span class="en">auth</span></span>
+        <span class="be-prefix">/api/auth</span>
+        <span class="be-svc">—</span>
+        <span class="be-methods">login · me · register</span>
+        <span class="be-role">JWT 签发 / 当前用户 / 注册</span>
+      </div>
+      <div class="be-row">
+        <span class="be-mod">接口管理<span class="en">apis</span></span>
+        <span class="be-prefix">/api/apis</span>
+        <span class="be-svc">CheckService</span>
+        <span class="be-methods">CRUD · batch · import · check_now · authorize</span>
+        <span class="be-role">接口配置 + 手动巡检 + 授权</span>
+      </div>
+      <div class="be-row">
+        <span class="be-mod">巡检日志<span class="en">logs</span></span>
+        <span class="be-prefix">/api/logs</span>
+        <span class="be-svc">—</span>
+        <span class="be-methods">list · filter · pagination</span>
+        <span class="be-role">日志查询 + 状态/耗时筛选</span>
+      </div>
+      <div class="be-row">
+        <span class="be-mod">告警管理<span class="en">alerts</span></span>
+        <span class="be-prefix">/api/alerts</span>
+        <span class="be-svc">AlertService</span>
+        <span class="be-methods">list · resolve · check_and_alert</span>
+        <span class="be-role">告警检测/聚合/恢复/升级</span>
+      </div>
+      <div class="be-row">
+        <span class="be-mod">统计分析<span class="en">stats</span></span>
+        <span class="be-prefix">/api/stats</span>
+        <span class="be-svc">StatsService</span>
+        <span class="be-methods">dashboard · sla · compare · export_csv/pdf</span>
+        <span class="be-role">仪表盘 + SLA + 报表导出</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 8 · Data Model (T10 Feature Split) ============ -->
+  <section class="slide s-feature" data-title="数据模型">
+    <div class="feature-img stagger">
+      <svg class="er-svg" viewBox="0 0 520 480" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="erIris" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#5683da" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#5683da" stop-opacity="0.04"/>
+          </linearGradient>
+          <linearGradient id="erEmber" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff8964" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#ff8964" stop-opacity="0.04"/>
+          </linearGradient>
+        </defs>
+        <!-- apis center -->
+        <rect x="190" y="190" width="140" height="100" rx="10" fill="url(#erIris)" stroke="#5683da" stroke-width="1.2"/>
+        <text x="260" y="212" text-anchor="middle" fill="#5683da" font-family="JetBrains Mono" font-size="10" letter-spacing="1.5">APIS</text>
+        <text x="260" y="234" text-anchor="middle" fill="#fff" font-family="Sora" font-size="15" font-weight="500">接口配置表</text>
+        <text x="260" y="254" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">name · url · method</text>
+        <text x="260" y="270" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">timeout · interval</text>
+
+        <!-- users left -->
+        <rect x="20" y="40" width="130" height="80" rx="10" fill="url(#erEmber)" stroke="#ff8964" stroke-width="1.2"/>
+        <text x="85" y="60" text-anchor="middle" fill="#ff8964" font-family="JetBrains Mono" font-size="10" letter-spacing="1.5">USERS</text>
+        <text x="85" y="80" text-anchor="middle" fill="#fff" font-family="Sora" font-size="13" font-weight="500">用户表</text>
+        <text x="85" y="98" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">username · role</text>
+        <text x="85" y="112" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">password_hash</text>
+
+        <!-- check_logs top -->
+        <rect x="370" y="40" width="130" height="80" rx="10" fill="url(#erIris)" stroke="#5683da" stroke-width="1.2"/>
+        <text x="435" y="60" text-anchor="middle" fill="#5683da" font-family="JetBrains Mono" font-size="10" letter-spacing="1.5">CHECK_LOGS</text>
+        <text x="435" y="80" text-anchor="middle" fill="#fff" font-family="Sora" font-size="13" font-weight="500">巡检日志表</text>
+        <text x="435" y="98" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">status · http_status</text>
+        <text x="435" y="112" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">response_time_ms</text>
+
+        <!-- alerts right -->
+        <rect x="370" y="200" width="130" height="80" rx="10" fill="url(#erEmber)" stroke="#ff8964" stroke-width="1.2"/>
+        <text x="435" y="220" text-anchor="middle" fill="#ff8964" font-family="JetBrains Mono" font-size="10" letter-spacing="1.5">ALERTS</text>
+        <text x="435" y="240" text-anchor="middle" fill="#fff" font-family="Sora" font-size="13" font-weight="500">告警记录表</text>
+        <text x="435" y="258" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">alert_type · status</text>
+        <text x="435" y="272" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">pending/resolved</text>
+
+        <!-- api_authorizations bottom-left -->
+        <rect x="20" y="360" width="130" height="80" rx="10" fill="url(#erEmber)" stroke="#ff8964" stroke-width="1.2"/>
+        <text x="85" y="380" text-anchor="middle" fill="#ff8964" font-family="JetBrains Mono" font-size="10" letter-spacing="1.5">AUTHORIZATIONS</text>
+        <text x="85" y="400" text-anchor="middle" fill="#fff" font-family="Sora" font-size="13" font-weight="500">接口授权表</text>
+        <text x="85" y="418" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">api_id · user_id</text>
+        <text x="85" y="432" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">(api_id,user_id) uniq</text>
+
+        <!-- relations lines -->
+        <line x1="150" y1="80" x2="190" y2="200" stroke="#5683da" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+        <text x="165" y="145" fill="#5683da" font-family="JetBrains Mono" font-size="8">N:1</text>
+        <line x1="370" y1="80" x2="330" y2="200" stroke="#5683da" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+        <text x="350" y="145" fill="#5683da" font-family="JetBrains Mono" font-size="8">N:1</text>
+        <line x1="370" y1="240" x2="330" y2="240" stroke="#ff8964" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+        <text x="345" y="234" fill="#ff8964" font-family="JetBrains Mono" font-size="8">N:1</text>
+        <line x1="150" y1="400" x2="190" y2="280" stroke="#ff8964" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+        <text x="160" y="345" fill="#ff8964" font-family="JetBrains Mono" font-size="8">N:1</text>
+
+        <!-- legend -->
+        <text x="260" y="465" text-anchor="middle" fill="#6b6c6d" font-family="JetBrains Mono" font-size="9" letter-spacing="1">— CASCADE · 外键级联删除 —</text>
+      </svg>
+    </div>
+    <div class="feature-text stagger">
+      <span class="kicker">07 / Data Model · 数据模型</span>
+      <h1 class="h-1">5 张表 · 以 apis 为核心</h1>
+      <p class="lead">SQLAlchemy 2.0 声明式映射，所有子表通过 api_id 外键关联 apis，统一 CASCADE 级联删除。统计指标由 CheckLog 实时计算，无需预聚合表。</p>
+      <div class="feature-points">
+        <div class="feature-point">
+          <span class="idx">01</span>
+          <div>
+            <div class="h">apis · 接口配置</div>
+            <div class="d">含 body_type (json/data) 决定请求体发送方式，1→N 关联日志/告警。</div>
+          </div>
+        </div>
+        <div class="feature-point">
+          <span class="idx">02</span>
+          <div>
+            <div class="h">check_logs · 巡检日志</div>
+            <div class="d">记录每次巡检 status / http_status / response_time_ms / error_message。</div>
+          </div>
+        </div>
+        <div class="feature-point">
+          <span class="idx">03</span>
+          <div>
+            <div class="h">alerts + api_authorizations</div>
+            <div class="d">告警状态机 (pending/resolved) + 接口-用户多对多授权关联表。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 7 · Business Flow (T22 Info Dashboard) ============ -->
+  <section class="slide s-dashboard" data-title="业务流程">
+    <div class="dash-head stagger">
+      <div>
+        <span class="kicker">08 / Business Flow · 业务流程</span>
+        <h1 class="h-1">定时巡检 · 告警联动闭环</h1>
+      </div>
+      <p class="lead">APScheduler 每 60 秒触发全量巡检，串联巡检引擎 → 告警检测 → 自动恢复 → 升级通知，全程写审计日志。</p>
+    </div>
+    <div class="dash-metrics stagger">
+      <div class="dash-metric">
+        <span class="dm-value">60<b>s</b></span>
+        <span class="dm-label">巡检周期</span>
+      </div>
+      <div class="dash-metric">
+        <span class="dm-value">3<b>次</b></span>
+        <span class="dm-label">失败重试</span>
+      </div>
+      <div class="dash-metric">
+        <span class="dm-value">20</span>
+        <span class="dm-label">并发上限</span>
+      </div>
+      <div class="dash-metric">
+        <span class="dm-value">2<b>h</b></span>
+        <span class="dm-label">升级阈值</span>
+      </div>
+    </div>
+    <div class="dash-body stagger">
+      <div class="dash-chart">
+        <div class="dash-chart-title">CHECK &amp; ALERT FLOW · 巡检告警链路</div>
+        <svg class="flow-svg" viewBox="0 0 560 200" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowIris" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#5683da"/>
+            </marker>
+            <marker id="arrowEmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#ff8964"/>
+            </marker>
+          </defs>
+          <!-- nodes -->
+          <rect x="10" y="80" width="100" height="44" rx="6" fill="rgba(86,131,218,0.12)" stroke="#5683da" stroke-width="1"/>
+          <text x="60" y="100" text-anchor="middle" fill="#fff" font-family="Sora" font-size="11" font-weight="500">APScheduler</text>
+          <text x="60" y="115" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">每 60s 触发</text>
+
+          <rect x="140" y="80" width="100" height="44" rx="6" fill="rgba(86,131,218,0.12)" stroke="#5683da" stroke-width="1"/>
+          <text x="190" y="100" text-anchor="middle" fill="#fff" font-family="Sora" font-size="11" font-weight="500">CheckService</text>
+          <text x="190" y="115" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">httpx + 重试</text>
+
+          <rect x="270" y="80" width="100" height="44" rx="6" fill="rgba(86,131,218,0.12)" stroke="#5683da" stroke-width="1"/>
+          <text x="320" y="100" text-anchor="middle" fill="#fff" font-family="Sora" font-size="11" font-weight="500">写 CheckLog</text>
+          <text x="320" y="115" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">响应/状态/耗时</text>
+
+          <rect x="400" y="40" width="100" height="44" rx="6" fill="rgba(255,137,100,0.12)" stroke="#ff8964" stroke-width="1"/>
+          <text x="450" y="60" text-anchor="middle" fill="#fff" font-family="Sora" font-size="11" font-weight="500">检测告警</text>
+          <text x="450" y="75" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">三类规则</text>
+
+          <rect x="400" y="120" width="100" height="44" rx="6" fill="rgba(255,137,100,0.12)" stroke="#ff8964" stroke-width="1"/>
+          <text x="450" y="140" text-anchor="middle" fill="#fff" font-family="Sora" font-size="11" font-weight="500">自动恢复</text>
+          <text x="450" y="155" text-anchor="middle" fill="#a9a9aa" font-family="Inter" font-size="9">resolve + 邮件</text>
+
+          <rect x="270" y="160" width="100" height="32" rx="6" fill="rgba(255,137,100,0.08)" stroke="#ff8964" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="320" y="180" text-anchor="middle" fill="#ff8964" font-family="Sora" font-size="10" font-weight="500">升级通知 &gt;2h</text>
+
+          <!-- arrows -->
+          <line x1="110" y1="102" x2="138" y2="102" stroke="#5683da" stroke-width="1.2" marker-end="url(#arrowIris)"/>
+          <line x1="240" y1="102" x2="268" y2="102" stroke="#5683da" stroke-width="1.2" marker-end="url(#arrowIris)"/>
+          <line x1="370" y1="95" x2="398" y2="65" stroke="#5683da" stroke-width="1.2" marker-end="url(#arrowIris)"/>
+          <line x1="370" y1="110" x2="398" y2="138" stroke="#ff8964" stroke-width="1.2" marker-end="url(#arrowEmber)"/>
+          <line x1="400" y1="84" x2="372" y2="160" stroke="#ff8964" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrowEmber)" opacity="0.7"/>
+
+          <text x="190" y="40" text-anchor="middle" fill="#5683da" font-family="JetBrains Mono" font-size="9" letter-spacing="1">CHECK PIPELINE</text>
+          <text x="450" y="20" text-anchor="middle" fill="#ff8964" font-family="JetBrains Mono" font-size="9" letter-spacing="1">ALERT PIPELINE</text>
+        </svg>
+      </div>
+      <div class="dash-highlights">
+        <div class="dash-highlights-title">ALERT RULES · 三类告警</div>
+        <div class="dash-item">
+          <div class="dash-dot"></div>
+          <div>
+            <div class="dash-h">response_timeout</div>
+            <div class="dash-d">响应时间 &gt; api.timeout 阈值</div>
+          </div>
+        </div>
+        <div class="dash-item">
+          <div class="dash-dot"></div>
+          <div>
+            <div class="dash-h">status_code_error</div>
+            <div class="dash-d">status=failure 且有 http_status</div>
+          </div>
+        </div>
+        <div class="dash-item warm">
+          <div class="dash-dot"></div>
+          <div>
+            <div class="dash-h">consecutive_failure</div>
+            <div class="dash-d">最近 3 条日志全部 failure</div>
+          </div>
+        </div>
+        <div class="dash-item warm">
+          <div class="dash-dot"></div>
+          <div>
+            <div class="dash-h">聚合 · 升级 · 恢复</div>
+            <div class="dash-d">同类型 pending 不重复 · &gt;2h 升级 · 成功自动 resolve</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 8 · Permissions (T18 Dense Table) ============ -->
+  <section class="slide s-dense-table" data-title="权限矩阵">
+    <div class="dense-head stagger">
+      <div>
+        <span class="kicker">09 / RBAC · 角色权限矩阵</span>
+        <h1 class="h-1">三级角色 · 最小权限原则</h1>
+      </div>
+      <p class="lead">admin 全权管理，operator 限定授权接口的运维操作，viewer 仅查看；接口授权表精细化控制 operator 可见范围。</p>
+    </div>
+    <div class="dense-table stagger">
+      <div class="dt-row dt-header">
+        <span>操作 / Operation</span>
+        <span>Admin</span>
+        <span>Operator</span>
+        <span>Viewer</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">仪表盘 / 日志 / 告警 / 报表查看</span>
+        <span class="dt-cell-yes">✓ 全部</span>
+        <span class="dt-cell-partial">✓ 仅授权接口</span>
+        <span class="dt-cell-yes">✓</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">接口 CRUD · 批量操作 · 授权</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-no">✗</span>
+        <span class="dt-cell-no">✗</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">手动巡检</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-no">✗</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">解决告警</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-no">✗</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">报表导出 · 审计日志下载</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-no">✗</span>
+        <span class="dt-cell-no">✗</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-label">用户管理 · 用户授权接口</span>
+        <span class="dt-cell-yes">✓</span>
+        <span class="dt-cell-no">✗</span>
+        <span class="dt-cell-no">✗</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 9 · Run (T06 Refine List) ============ -->
+  <section class="slide s-refine" data-title="项目运行">
+    <div class="stagger">
+      <span class="kicker">10 / Run · 项目运行</span>
+      <h1 class="h-1">零配置启动<br>开箱即用</h1>
+      <p class="lead">SQLite 默认零配置，自动建表 + 启动调度器；前后端独立端口，Axios 直连 8000。</p>
+    </div>
+    <div class="refine-list stagger">
+      <div class="refine-item">
+        <span class="idx"><b>01</b> · BACKEND</span>
+        <div>
+          <div class="h">后端启动（:8000）</div>
+          <div class="d">安装依赖后启动 uvicorn，启动时自动建表并启动 APScheduler 定时巡检。</div>
+          <div class="code-block">
+            <span class="cm-comment"># backend/</span><br>
+            <span class="cm-cmd">pip install</span> -r requirements.txt<br>
+            <span class="cm-cmd">python</span> seed.py &nbsp;<span class="cm-comment"># 可选：写入种子数据</span><br>
+            <span class="cm-cmd">uvicorn</span> app.main:app --reload --port 8000
+          </div>
+        </div>
+      </div>
+      <div class="refine-item">
+        <span class="idx"><b>02</b> · FRONTEND</span>
+        <div>
+          <div class="h">前端启动（:5173）</div>
+          <div class="d">Vite 开发服务器，Axios baseURL 直连后端，CORS 已放行 5173 端口。</div>
+          <div class="code-block">
+            <span class="cm-comment"># frontend/</span><br>
+            <span class="cm-cmd">npm install</span><br>
+            <span class="cm-cmd">npm run</span> dev &nbsp;<span class="cm-comment"># → http://localhost:5173</span>
+          </div>
+        </div>
+      </div>
+      <div class="refine-item">
+        <span class="idx"><b>03</b> · ACCOUNTS</span>
+        <div>
+          <div class="h">默认账号（种子数据）</div>
+          <div class="d">三角色示例账号，便于快速验证权限矩阵与授权范围。</div>
+          <div class="code-block">
+            <span class="cm-out">admin</span> / admin123 &nbsp;<span class="cm-comment">(管理员)</span> &nbsp;·&nbsp;
+            <span class="cm-out">operator</span> / oper123 &nbsp;<span class="cm-comment">(运维)</span> &nbsp;·&nbsp;
+            <span class="cm-out">viewer</span> / view123 &nbsp;<span class="cm-comment">(观察)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 10 · Closing (T08) ============ -->
+  <section class="slide s-close" data-title="结语">
+    <div class="close-left">
+      <div class="chrome-min">
+        <span>10 / 10</span>
+        <span>Closing</span>
+      </div>
+      <div class="manifesto stagger">
+        <div class="meta">PROJECT VALUE · 项目价值</div>
+        <h2>让稳定性<br>从<em>被动救火</em><br>走向主动守护</h2>
+        <div class="sub">以轻量架构承载企业级可观测性，把每一次接口抖动转化为可追溯、可闭环、可度量的运维行动。</div>
+      </div>
+      <div class="sig">
+        <span><b>API Monitor</b> · v1.0</span>
+        <span>2026.07</span>
+      </div>
+    </div>
+    <div class="close-right">
+      <div class="chrome-min">
+        <span>Takeaways</span>
+        <span>03 Points</span>
+      </div>
+      <div class="takeaways stagger">
+        <div class="take-item">
+          <div class="num">01</div>
+          <div>
+            <h3>全链路可观测</h3>
+            <p>从接口接入、定时巡检、日志记录到告警通知与 SLA 统计，覆盖完整运维闭环。</p>
+          </div>
+        </div>
+        <div class="take-item">
+          <div class="num">02</div>
+          <div>
+            <h3>角色化协作</h3>
+            <p>三级 RBAC + 接口授权精细化，让 admin / operator / viewer 各司其职，最小权限原则。</p>
+          </div>
+        </div>
+        <div class="take-item">
+          <div class="num">03</div>
+          <div>
+            <h3>轻量可扩展</h3>
+            <p>SQLite 零配置 + FastAPI 异步 + 模块化 feature 架构，NotificationChannel 可平滑扩展钉钉/企微。</p>
+          </div>
+        </div>
+      </div>
+      <div class="foot">→ Start monitoring your APIs today</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('canvas');
+  const slides=document.querySelectorAll('.slide');
+  const navDots=document.getElementById('navDots');
+  const pgCur=document.getElementById('pgCur');
+  let current=0;
+  const total=slides.length;
+
+  // Build nav dots
+  slides.forEach((s,i)=>{
+    const dot=document.createElement('button');
+    dot.className='nav-dot'+(i===0?' active':'');
+    dot.setAttribute('aria-label','跳转到第'+(i+1)+'页 '+s.dataset.title);
+    dot.addEventListener('click',()=>go(i));
+    navDots.appendChild(dot);
+  });
+  const dots=navDots.querySelectorAll('.nav-dot');
+
+  function go(i){
+    if(i<0||i>=total||i===current) return;
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current=i;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+    pgCur.textContent=String(i+1).padStart(2,'0');
+  }
+
+  function next(){go(current+1);}
+  function prev(){go(current-1);}
+
+  // Keyboard
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){e.preventDefault();go(0);}
+    else if(e.key==='End'){e.preventDefault();go(total-1);}
+  });
+
+  // Wheel
+  let wheelLock=false;
+  document.addEventListener('wheel',e=>{
+    if(wheelLock) return;
+    if(Math.abs(e.deltaY)<24) return;
+    wheelLock=true;
+    if(e.deltaY>0) next(); else prev();
+    setTimeout(()=>{wheelLock=false;},700);
+  },{passive:true});
+
+  // Touch
+  let touchStartX=0, touchStartY=0;
+  document.addEventListener('touchstart',e=>{
+    touchStartX=e.touches[0].clientX;
+    touchStartY=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-touchStartX;
+    const dy=e.changedTouches[0].clientY-touchStartY;
+    if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>50){
+      if(dx<0) next(); else prev();
+    }
+  },{passive:true});
+
+  // Scale to fit viewport
+  function fit(){
+    const w=window.innerWidth;
+    const h=window.innerHeight;
+    const s=Math.min(w/1280, h/720);
+    canvas.style.transform='translate(-50%,-50%) scale('+s+')';
+  }
+  window.addEventListener('resize',fit);
+  fit();
+})();
+</script>
+</body>
+</html>

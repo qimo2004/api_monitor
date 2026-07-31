@@ -1,8 +1,8 @@
-"""种子数据脚本：为5张表写入测试数据，支持三种数据库连接方式"""
-from datetime import datetime, timezone, date, timedelta
+"""种子数据脚本：为4张表写入测试数据，支持三种数据库连接方式"""
+from datetime import datetime, timedelta
 from app.core.config import engine, SessionLocal
 from app.models import Base
-from app.models.models import User, Api, CheckLog, Alert, ApiStatsDaily
+from app.models.models import User, Api, CheckLog, Alert
 from app.core.security import hash_password
 
 
@@ -12,7 +12,6 @@ def seed():
 
     try:
         # 清除已有数据
-        db.query(ApiStatsDaily).delete()
         db.query(Alert).delete()
         db.query(CheckLog).delete()
         db.query(Api).delete()
@@ -54,7 +53,7 @@ def seed():
         db.commit()
 
         # 3. 巡检日志 (每个接口2~4条)
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         # 给某些特定接口加入失败记录
         failure_apis = {"模拟支付-查询订单", "DummyJSON 模拟登录", "ReqRes 注册"}
         logs = []
@@ -89,36 +88,11 @@ def seed():
         db.add_all(alerts)
         db.commit()
 
-        # 5. 日统计
-        today = date.today()
-        stats = []
-        for i, api in enumerate(apis):
-            if not api.enabled:
-                continue
-            for d in range(7):
-                day = today - timedelta(days=d)
-                total = 100 + i * 10
-                failed = i % 3
-                stats.append(ApiStatsDaily(
-                    api_id=api.id,
-                    date=day,
-                    total_checks=total,
-                    success_count=total - failed,
-                    failed_count=failed,
-                    timeout_count=i % 4,
-                    avg_response_time=150 + i * 30,
-                    max_response_time=300 + i * 50,
-                    min_response_time=100 + i * 20,
-                ))
-        db.add_all(stats)
-        db.commit()
-
         print("✅ 种子数据写入成功！")
         print(f"  - users: {len(users)} 条")
         print(f"  - apis: {len(apis)} 条")
         print(f"  - check_logs: {len(logs)} 条")
         print(f"  - alerts: {len(alerts)} 条")
-        print(f"  - api_stats_daily: {len(stats)} 条")
     except Exception as e:
         db.rollback()
         print(f"❌ 写入失败: {e}")
